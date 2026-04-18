@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>피트니스 P&L 시뮬레이터</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg: #F7F6F3;
+  --surface: #FFFFFF;
+  --border: #E5E4E0;
+  --border2: #D0CFC9;
+  --text: #1A1915;
+  --text2: #6B6A66;
+  --text3: #A09F9A;
+  --blue: #1565C0;
+  --blue-bg: #E3F2FD;
+  --teal: #0F6E56;
+  --teal-bg: #E0F2F1;
+  --purple: #4527A0;
+  --purple-bg: #EDE7F6;
+  --green: #2E7D32;
+  --green-bg: #C8E6C9;
+  --coral: #7B3811;
+  --coral-bg: #FBE9E7;
+  --red: #B71C1C;
+  --red-bg: #FCE4EC;
+  --amber: #854F0B;
+  --amber-bg: #FFF9C4;
+  --gray-bg: #F5F5F5;
+  --navy: #1B3A5C;
+  --profit: #1B5E20;
+  --profit-bg: #E8F5E9;
+  --nav-w: 200px;
+  --radius: 8px;
+  --shadow: 0 1px 4px rgba(0,0,0,.08);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+       background: var(--bg); color: var(--text); font-size: 13px; display: flex; min-height: 100vh; }
+
+/* ── 사이드 네비 ── */
+#nav {
+  width: var(--nav-w); background: var(--navy); color: #fff;
+  display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh;
+  z-index: 100; overflow-y: auto;
+}
+#nav .logo { padding: 20px 16px 12px; border-bottom: 1px solid rgba(255,255,255,.12); }
+#nav .logo h1 { font-size: 13px; font-weight: 600; line-height: 1.4; }
+#nav .logo p { font-size: 10px; color: rgba(255,255,255,.5); margin-top: 2px; }
+#nav ul { list-style: none; padding: 8px 0; flex: 1; }
+#nav ul li a {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 16px; font-size: 12px; color: rgba(255,255,255,.7);
+  text-decoration: none; border-left: 3px solid transparent; transition: all .15s;
+}
+#nav ul li a:hover { background: rgba(255,255,255,.08); color: #fff; }
+#nav ul li a.active { background: rgba(255,255,255,.12); color: #fff; border-left-color: #90CAF9; }
+#nav ul li a .icon { font-size: 14px; width: 18px; text-align: center; }
+#nav .nav-section { font-size: 9px; font-weight: 600; letter-spacing: .08em;
+  text-transform: uppercase; color: rgba(255,255,255,.35); padding: 12px 16px 4px; }
+#nav .calc-bar { padding: 12px 16px; border-top: 1px solid rgba(255,255,255,.12); }
+#nav .calc-bar button {
+  width: 100%; padding: 8px; background: #1565C0; color: #fff; border: none;
+  border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer;
+}
+
+/* ── 메인 ── */
+#main { margin-left: var(--nav-w); flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+
+/* ── 페이지 ── */
+.page { display: none; flex-direction: column; }
+.page.active { display: flex; }
+.page-header {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 20px 28px 16px; position: sticky; top: 0; z-index: 50;
+}
+.page-header h2 { font-size: 18px; font-weight: 600; }
+.page-header p { font-size: 12px; color: var(--text2); margin-top: 3px; }
+.page-body { padding: 24px 28px; flex: 1; }
+
+/* ── 카드 ── */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px 20px; margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+.card-title {
+  font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--text2); margin-bottom: 14px; display: flex; align-items: center; gap: 6px;
+}
+.card-title .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* ── 그리드 ── */
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.g4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
+
+/* ── 입력 필드 ── */
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: 11px; color: var(--text2); }
+.field input[type=number], .field input[type=text], .field select {
+  padding: 7px 10px; border: 1px solid var(--border2); border-radius: 6px;
+  font-size: 12px; background: var(--surface); width: 100%;
+  color: var(--text); outline: none; transition: border .15s;
+}
+.field input:focus, .field select:focus { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(21,101,192,.1); }
+.field .hint { font-size: 10px; color: var(--blue); font-style: italic; margin-top: 1px; }
+.field .auto-val {
+  font-size: 11px; padding: 5px 10px; border-radius: 6px;
+  background: var(--amber-bg); color: var(--amber); font-weight: 500; text-align: right;
+}
+
+/* ── 섹션 헤더 ── */
+.sec-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px; margin-top: 20px;
+}
+.sec-header:first-child { margin-top: 0; }
+.sec-label {
+  font-size: 12px; font-weight: 600; padding: 3px 10px;
+  border-radius: 20px; display: inline-flex; align-items: center; gap: 5px;
+}
+.subtotal-box {
+  background: var(--gray-bg); border: 1px solid var(--border);
+  border-radius: 6px; padding: 8px 14px;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 8px;
+}
+.subtotal-box .st-label { font-size: 11px; color: var(--text2); }
+.subtotal-box .st-val { font-size: 14px; font-weight: 600; }
+
+/* ── 합계 박스 ── */
+.total-box {
+  border-radius: 8px; padding: 12px 16px;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 12px; border: 1.5px solid;
+}
+.total-box .t-label { font-size: 12px; font-weight: 600; }
+.total-box .t-val { font-size: 18px; font-weight: 700; }
+
+/* PB 강조 */
+.pb-highlight {
+  background: var(--green-bg); border: 2px solid #639922; border-radius: 8px;
+  padding: 12px 16px; margin-top: 8px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.pb-highlight .pbl { font-size: 11px; color: var(--green); font-weight: 600; }
+.pb-highlight .pbv { font-size: 18px; font-weight: 700; color: var(--green); }
+
+/* ── 입점업체 행 ── */
+.tenant-row {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--gray-bg); border: 1px solid var(--border);
+  border-radius: 6px; padding: 7px 10px; margin-bottom: 6px;
+}
+.tenant-row .t-name input { flex: 1; font-size: 12px; padding: 4px 8px; border: 1px solid transparent; border-radius: 4px; background: transparent; }
+.tenant-row .t-name input:focus { background: var(--surface); border-color: var(--border2); }
+.tenant-row .t-amt input { width: 140px; font-size: 12px; padding: 4px 8px; border: 1px solid var(--border2); border-radius: 4px; }
+.tenant-row .t-result { font-size: 12px; font-weight: 600; min-width: 80px; text-align: right; }
+.tenant-row .t-del { background: none; border: none; cursor: pointer; color: var(--red); font-size: 14px; padding: 2px 6px; border-radius: 4px; }
+.tenant-row .t-del:hover { background: var(--red-bg); }
+.add-btn {
+  display: flex; align-items: center; gap: 5px; padding: 6px 12px;
+  border: 1px dashed var(--border2); border-radius: 6px; background: none;
+  font-size: 11px; color: var(--text2); cursor: pointer; margin-top: 4px;
+}
+.add-btn:hover { background: var(--gray-bg); color: var(--text); }
+
+/* ── P&L 테이블 ── */
+.pl-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.pl-table tr { border-bottom: 1px solid var(--border); }
+.pl-table td { padding: 6px 8px; }
+.pl-table td:last-child { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pl-row-section { font-weight: 600; color: #fff; font-size: 11px; }
+.pl-row-sub { font-weight: 600; font-size: 11px; }
+.pl-row-detail td:first-child { padding-left: 20px; color: var(--text2); }
+.pl-row-detail2 td:first-child { padding-left: 34px; color: var(--text3); font-size: 11px; }
+.pl-row-total { font-weight: 700; font-size: 13px; border-top: 2px solid var(--border2) !important; }
+.pl-row-gp td { font-weight: 700; font-size: 13px; }
+.pl-row-op td { font-weight: 700; font-size: 14px; }
+.pl-formula { font-size: 10px; color: var(--text3); font-style: italic; padding: 1px 8px 4px 20px; }
+
+/* ── KPI 카드 ── */
+.kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 16px; }
+.kpi-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow);
+}
+.kpi-card .kl { font-size: 10px; color: var(--text2); margin-bottom: 5px; }
+.kpi-card .kv { font-size: 22px; font-weight: 700; }
+.kpi-card .ks { font-size: 10px; color: var(--text2); margin-top: 3px; }
+
+/* ── 체크리스트 ── */
+.check-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px;
+}
+.check-row:last-child { border-bottom: none; }
+.check-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+}
+.ok { background: #E8F5E9; color: #1B5E20; }
+.ng { background: #FCE4EC; color: #B71C1C; }
+
+/* ── BEP 바 ── */
+.bep-bar-wrap { margin: 10px 0; }
+.bep-bar-bg { background: var(--gray-bg); border-radius: 6px; height: 12px; overflow: hidden; }
+.bep-bar-fill { height: 100%; border-radius: 6px; transition: width .4s; }
+.bep-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text3); margin-top: 3px; }
+
+/* ── 아카이브 ── */
+.arch-item {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px 16px; margin-bottom: 8px; cursor: pointer; transition: all .15s;
+}
+.arch-item:hover { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(21,101,192,.08); }
+.arch-item.selected { border-color: var(--blue); background: var(--blue-bg); }
+.arch-item .ai-title { font-size: 13px; font-weight: 600; }
+.arch-item .ai-meta { font-size: 11px; color: var(--text2); margin-top: 4px; display: flex; gap: 14px; flex-wrap: wrap; }
+.arch-month-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+.arch-month-bar select { font-size: 12px; padding: 6px 10px; border: 1px solid var(--border2); border-radius: 6px; }
+.chart-wrap { position: relative; height: 200px; margin: 10px 0; }
+
+/* ── 버튼 ── */
+.btn { padding: 7px 16px; border-radius: 6px; font-size: 12px; font-weight: 600;
+       cursor: pointer; border: 1px solid var(--border2); background: var(--surface);
+       color: var(--text); transition: all .15s; }
+.btn:hover { background: var(--gray-bg); }
+.btn-primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+.btn-primary:hover { background: #0D47A1; }
+.btn-danger { color: var(--red); border-color: #EF9A9A; }
+.btn-sm { padding: 4px 10px; font-size: 11px; }
+
+.divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.pos { color: var(--profit); }
+.neg { color: var(--red); }
+.warn { color: var(--amber); }
+.empty-state { text-align: center; padding: 32px; color: var(--text3); font-size: 12px; }
+
+@media (max-width: 900px) {
+  #nav { width: 56px; }
+  #nav .logo h1, #nav .logo p, #nav ul li a span:not(.icon),
+  #nav .nav-section, #nav .calc-bar button span { display: none; }
+  #nav ul li a { justify-content: center; padding: 10px; }
+  #main { margin-left: 56px; }
+  .kpi-grid { grid-template-columns: repeat(2,1fr); }
+  .g4 { grid-template-columns: 1fr 1fr; }
+  .g3 { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── 사이드 네비 ── -->
+<nav id="nav">
+  <div class="logo">
+    <h1>피트니스<br>P&L 시뮬레이터</h1>
+    <p>단계별 손익 관리</p>
+  </div>
+  <ul>
+    <div class="nav-section">매출 입력</div>
+    <li><a href="#" class="active" onclick="go('mbs',this)"><span class="icon">🏃</span><span>MBS 매출</span></a></li>
+    <li><a href="#" onclick="go('pt',this)"><span class="icon">💪</span><span>PT 매출</span></a></li>
+    <li><a href="#" onclick="go('tb',this)"><span class="icon">📋</span><span>TB 매출</span></a></li>
+    <li><a href="#" onclick="go('tenant',this)"><span class="icon">🏪</span><span>입점업체</span></a></li>
+    <div class="nav-section">비용 입력</div>
+    <li><a href="#" onclick="go('cos',this)"><span class="icon">💳</span><span>COS 매출원가</span></a></li>
+    <li><a href="#" onclick="go('sga',this)"><span class="icon">🏢</span><span>SG&A 비인건성</span></a></li>
+    <li><a href="#" onclick="go('labor',this)"><span class="icon">👥</span><span>SG&A 인건비</span></a></li>
+    <div class="nav-section">결과</div>
+    <li><a href="#" onclick="go('pl',this)"><span class="icon">📊</span><span>P&L 손익계산서</span></a></li>
+    <li><a href="#" onclick="go('dash',this)"><span class="icon">🎯</span><span>대시보드</span></a></li>
+    <li><a href="#" onclick="go('archive',this)"><span class="icon">📁</span><span>월별 아카이브</span></a></li>
+  </ul>
+  <div class="calc-bar">
+    <button onclick="go('pl',null)"><span>→ P&L 바로보기</span></button>
+  </div>
+</nav>
+
+<!-- ── 메인 ── -->
+<main id="main">
+
+<!-- ===== MBS ===== -->
+<div class="page active" id="page-mbs">
+  <div class="page-header">
+    <h2>🏃 MBS 매출 — 회원권</h2>
+    <p>구독 / 기간 / 1일권 / 법인 / 옵션 매출을 입력합니다</p>
+  </div>
+  <div class="page-body">
+    <div class="card">
+      <div class="sec-header">
+        <span class="sec-label" style="background:var(--blue-bg);color:var(--blue)">① 구독 매출</span>
+      </div>
+      <div class="g4">
+        <div class="field"><label>신규 구독자 (명)</label>
+          <input type="number" id="mbsSubNew" value="30" oninput="rc()">
+          <span class="hint" id="h-subNew">→</span></div>
+        <div class="field"><label>신규 구독 객단가 (원)</label>
+          <input type="number" id="mbsSubNewPrice" value="85000" oninput="rc()"></div>
+        <div class="field"><label>구독 만료 대상자 (명)</label>
+          <input type="number" id="mbsSubExpire" value="180" oninput="rc()"></div>
+        <div class="field"><label>구독 잔존율 (%)</label>
+          <input type="number" id="mbsSubRetain" value="82" oninput="rc()">
+          <span class="hint" id="h-subRenew">→</span></div>
+      </div>
+      <div class="g2" style="margin-top:8px">
+        <div class="field"><label>연장 객단가 (원)</label>
+          <input type="number" id="mbsSubRenewPrice" value="85000" oninput="rc()"></div>
+        <div></div>
+      </div>
+      <div class="subtotal-box">
+        <span class="st-label">구독 매출 소계</span>
+        <span class="st-val" style="color:var(--blue)" id="st-subTotal">-</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec-header">
+        <span class="sec-label" style="background:var(--blue-bg);color:var(--blue)">② 기간 매출</span>
+      </div>
+      <div class="g4">
+        <div class="field"><label>신규 기간권 결제자 (명)</label>
+          <input type="number" id="mbsPeriodNew" value="25" oninput="rc()">
+          <span class="hint" id="h-periodNew">→</span></div>
+        <div class="field"><label>신규 기간권 객단가 (원)</label>
+          <input type="number" id="mbsPeriodNewPrice" value="180000" oninput="rc()"></div>
+        <div class="field"><label>재등록 대상자 (명)</label>
+          <input type="number" id="mbsPeriodTarget" value="60" oninput="rc()"></div>
+        <div class="field"><label>재등록율 (%)</label>
+          <input type="number" id="mbsPeriodRenewRate" value="65" oninput="rc()">
+          <span class="hint" id="h-periodRenew">→</span></div>
+      </div>
+      <div class="g2" style="margin-top:8px">
+        <div class="field"><label>재등록 객단가 (원)</label>
+          <input type="number" id="mbsPeriodRenewPrice" value="160000" oninput="rc()"></div>
+        <div></div>
+      </div>
+      <div class="subtotal-box">
+        <span class="st-label">기간 매출 소계</span>
+        <span class="st-val" style="color:var(--blue)" id="st-periodTotal">-</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="g3">
+        <div>
+          <div class="sec-label" style="background:var(--blue-bg);color:var(--blue);margin-bottom:10px">③ 1일권</div>
+          <div class="g2">
+            <div class="field"><label>이용자 수 (명)</label><input type="number" id="mbsDay" value="40" oninput="rc()"></div>
+            <div class="field"><label>객단가 (원)</label><input type="number" id="mbsDayPrice" value="12000" oninput="rc()"></div>
+          </div>
+        </div>
+        <div>
+          <div class="sec-label" style="background:var(--blue-bg);color:var(--blue);margin-bottom:10px">④ 법인 / 옵션 (수동)</div>
+          <div class="g2">
+            <div class="field"><label>법인 매출 (원)</label><input type="number" id="mbsCorp" value="0" oninput="rc()"></div>
+            <div class="field"><label>옵션 매출 (원)</label><input type="number" id="mbsOption" value="0" oninput="rc()"></div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;justify-content:flex-end">
+          <div class="subtotal-box" style="height:100%;align-items:center;flex-direction:column;gap:4px;justify-content:center">
+            <span class="st-label">1일권</span><span class="st-val" style="color:var(--blue)" id="st-day">-</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="total-box" style="background:var(--blue-bg);border-color:var(--blue)">
+      <span class="t-label" style="color:var(--blue)">MBS 매출 합계</span>
+      <span class="t-val" style="color:var(--blue)" id="tt-mbs">-</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PT ===== -->
+<div class="page" id="page-pt">
+  <div class="page-header">
+    <h2>💪 PT 매출 — 퍼스널 트레이닝</h2>
+    <p>재등록 / 체험권 / 전환 / 오가닉 / 대관 매출을 입력합니다</p>
+  </div>
+  <div class="page-body">
+    <div class="card">
+      <div class="sec-label" style="background:var(--teal-bg);color:var(--teal);margin-bottom:12px">① PT 재등록 매출</div>
+      <div class="g3">
+        <div class="field"><label>재등록 대상자 (명)</label><input type="number" id="ptReTarget" value="25" oninput="rc()"></div>
+        <div class="field"><label>재등록율 (%)</label><input type="number" id="ptReRate" value="70" oninput="rc()">
+          <span class="hint" id="h-ptRe">→</span></div>
+        <div class="field"><label>재등록 객단가 (원)</label><input type="number" id="ptRePrice" value="550000" oninput="rc()"></div>
+      </div>
+      <div class="subtotal-box"><span class="st-label">PT 재등록 소계</span><span class="st-val" style="color:var(--teal)" id="st-ptRe">-</span></div>
+    </div>
+
+    <div class="card">
+      <div class="sec-label" style="background:var(--teal-bg);color:var(--teal);margin-bottom:12px">② PT 체험권 판매 매출</div>
+      <div class="g3">
+        <div class="field"><label>체험권 판매 수 (명)</label><input type="number" id="ptTrialSell" value="15" oninput="rc()"></div>
+        <div class="field"><label>체험권 객단가 (원)</label><input type="number" id="ptTrialPrice" value="99000" oninput="rc()"></div>
+        <div style="display:flex;align-items:flex-end">
+          <div class="subtotal-box" style="flex:1"><span class="st-label">체험권 소계</span><span class="st-val" style="color:var(--teal)" id="st-ptTrial">-</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec-label" style="background:var(--teal-bg);color:var(--teal);margin-bottom:4px">③ PT 체험→정규 전환 매출</div>
+      <p style="font-size:11px;color:var(--text3);margin-bottom:10px">체험권 판매 수 자동 연동</p>
+      <div class="g3">
+        <div class="field"><label>전환율 (%)</label><input type="number" id="ptConvRate" value="40" oninput="rc()">
+          <span class="hint" id="h-ptConv">→</span></div>
+        <div class="field"><label>정규 전환 객단가 (원)</label><input type="number" id="ptConvPrice" value="480000" oninput="rc()"></div>
+        <div style="display:flex;align-items:flex-end">
+          <div class="subtotal-box" style="flex:1"><span class="st-label">전환 소계</span><span class="st-val" style="color:var(--teal)" id="st-ptConv">-</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="g2">
+        <div>
+          <div class="sec-label" style="background:var(--teal-bg);color:var(--teal);margin-bottom:10px">④ PT 신규 오가닉</div>
+          <div class="g2">
+            <div class="field"><label>신규 결제자 (명)</label><input type="number" id="ptOrganic" value="8" oninput="rc()"></div>
+            <div class="field"><label>신규 객단가 (원)</label><input type="number" id="ptOrganicPrice" value="480000" oninput="rc()"></div>
+          </div>
+        </div>
+        <div>
+          <div class="sec-label" style="background:var(--teal-bg);color:var(--teal);margin-bottom:10px">⑤ PT 대관 매출 (수동)</div>
+          <div class="field"><label>대관 매출 (원)</label><input type="number" id="ptRental" value="0" oninput="rc()"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="total-box" style="background:var(--teal-bg);border-color:var(--teal)">
+      <span class="t-label" style="color:var(--teal)">PT 매출 합계</span>
+      <span class="t-val" style="color:var(--teal)" id="tt-pt">-</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TB ===== -->
+<div class="page" id="page-tb">
+  <div class="page-header">
+    <h2>📋 TB 매출 — 프로그램 / 레슨</h2>
+    <p>실속 / 프리미엄 / 상시프로모 매출을 입력합니다</p>
+  </div>
+  <div class="page-body">
+    <div class="card">
+      <div class="g3">
+        <div class="field"><label>실속 매출 (원)</label><input type="number" id="tbBasic" value="3000000" oninput="rc()"></div>
+        <div class="field"><label>프리미엄 매출 (원)</label><input type="number" id="tbPremium" value="2000000" oninput="rc()"></div>
+        <div class="field"><label>상시프로모 매출 (원)</label><input type="number" id="tbPromo" value="500000" oninput="rc()"></div>
+      </div>
+    </div>
+
+    <div class="total-box" style="background:var(--purple-bg);border-color:var(--purple)">
+      <span class="t-label" style="color:var(--purple)">TB 매출 합계</span>
+      <span class="t-val" style="color:var(--purple)" id="tt-tb">-</span>
+    </div>
+
+    <div class="pb-highlight" style="margin-top:16px">
+      <div>
+        <div class="pbl">★ PB 매출 합계 (핸들링 가능 매출)</div>
+        <div style="font-size:10px;color:var(--green);margin-top:2px" id="pb-break">MBS + PT + TB</div>
+      </div>
+      <span class="pbv" id="tt-pb">-</span>
+    </div>
+
+    <div style="margin-top:10px;padding:10px 14px;background:var(--gray-bg);border-radius:6px;font-size:11px;color:var(--text2)">
+      <strong style="color:var(--text)">PB 매출이란?</strong> 직접 핸들링 가능한 매출 = MBS + PT + TB + 옵션. 입점업체 / 기타 매출과 별도로 관리합니다.
+    </div>
+
+    <div class="divider"></div>
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--text2)"></span>기타 매출</div>
+      <div class="g2">
+        <div class="field"><label>수수료 수입 (원)</label><input type="number" id="commRev" value="300000" oninput="rc()"></div>
+        <div class="field"><label>기타 매출 (원)</label><input type="number" id="etcRev" value="0" oninput="rc()"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 입점업체 ===== -->
+<div class="page" id="page-tenant">
+  <div class="page-header">
+    <h2>🏪 입점업체 매출</h2>
+    <p>업체명 수정 가능 · 최대 8개 · 수동 입력</p>
+  </div>
+  <div class="page-body">
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--coral)"></span>입점업체 매출 목록</div>
+      <div id="tenant-list"></div>
+      <button class="add-btn" onclick="addTenant()" id="btn-add-tenant">＋ 업체 추가 (최대 8개)</button>
+    </div>
+    <div class="total-box" style="background:var(--coral-bg);border-color:var(--coral)">
+      <span class="t-label" style="color:var(--coral)">입점업체 합계</span>
+      <span class="t-val" style="color:var(--coral)" id="tt-tenant">-</span>
+    </div>
+
+    <div style="margin-top:24px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
+      <div style="font-size:11px;font-weight:600;margin-bottom:8px">📌 총 매출 구성 요약</div>
+      <div id="rev-summary" style="font-size:12px;color:var(--text2);line-height:1.8"></div>
+      <div style="margin-top:8px;font-size:16px;font-weight:700" id="rev-grand">-</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== COS ===== -->
+<div class="page" id="page-cos">
+  <div class="page-header">
+    <h2>💳 COS — 매출원가</h2>
+    <p>PT 강사료 · 입점업체 수수료 · 결제수수료 (자동)</p>
+  </div>
+  <div class="page-body">
+    <div class="card">
+      <div class="sec-label" style="background:var(--red-bg);color:var(--red);margin-bottom:12px">① PT 강사료 (수동 입력)</div>
+      <div class="g2">
+        <div class="field"><label>PT 강사료 합계 (원)</label><input type="number" id="ptCoachTotal" value="3500000" oninput="rc()"></div>
+        <div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec-label" style="background:var(--red-bg);color:var(--red);margin-bottom:8px">② 입점업체 수수료 (업체명 수정 · 최대 8개)</div>
+      <div id="tenantcost-list"></div>
+      <button class="add-btn" onclick="addTenantCost()" id="btn-add-tc">＋ 업체 추가</button>
+      <div class="subtotal-box" style="margin-top:8px">
+        <span class="st-label">입점업체 수수료 소계</span>
+        <span class="st-val" style="color:var(--red)" id="st-tc">-</span>
+      </div>
+    </div>
+
+    <div class="card" style="background:var(--amber-bg);border-color:#EF9F27">
+      <div class="sec-label" style="background:#FFF3E0;color:var(--amber);margin-bottom:10px">③ 결제수수료 (자동 계산)</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:12px;font-weight:500">총 매출 × 2.16%</div>
+          <div style="font-size:11px;color:var(--amber);margin-top:2px">총 매출이 변경되면 자동으로 업데이트됩니다</div>
+        </div>
+        <div style="font-size:20px;font-weight:700;color:var(--amber)" id="st-payFee">-</div>
+      </div>
+    </div>
+
+    <div class="total-box" style="background:var(--red-bg);border-color:var(--red)">
+      <span class="t-label" style="color:var(--red)">COS 합계</span>
+      <span class="t-val" style="color:var(--red)" id="tt-cos">-</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SG&A 비인건성 ===== -->
+<div class="page" id="page-sga">
+  <div class="page-header">
+    <h2>🏢 SG&A — 비인건성 판관비</h2>
+    <p>임관비 / 세탁비 / 소모품비 / 수선비 / 마케팅비 / 기타</p>
+  </div>
+  <div class="page-body">
+    <div class="card">
+      <div class="sec-label" style="background:var(--gray-bg);color:var(--text2);margin-bottom:12px">① 임관비</div>
+      <div class="g4">
+        <div class="field"><label>임차료 (원)</label><input type="number" id="rent" value="6000000" oninput="rc()"></div>
+        <div class="field"><label>고정관리비 (원)</label><input type="number" id="mgmtFee" value="300000" oninput="rc()"></div>
+        <div class="field"><label>전기료 (원)</label><input type="number" id="electric" value="400000" oninput="rc()"></div>
+        <div class="field"><label>수도료 (원)</label><input type="number" id="water" value="100000" oninput="rc()"></div>
+      </div>
+      <div class="subtotal-box"><span class="st-label">임관비 소계</span><span class="st-val" id="st-imgwan">-</span></div>
+    </div>
+
+    <div class="card">
+      <div class="sec-label" style="background:var(--gray-bg);color:var(--text2);margin-bottom:12px">② 기타 비인건성 비용</div>
+      <div class="g3">
+        <div class="field"><label>세탁비 (원)</label><input type="number" id="laundry" value="150000" oninput="rc()"></div>
+        <div class="field"><label>소모품비 (원)</label><input type="number" id="supplies" value="300000" oninput="rc()"></div>
+        <div class="field"><label>수선비 (원)</label><input type="number" id="repair" value="100000" oninput="rc()"></div>
+      </div>
+      <div class="g2" style="margin-top:8px">
+        <div class="field"><label>마케팅비 (원)</label><input type="number" id="marketing" value="800000" oninput="rc()"></div>
+        <div class="field"><label>기타비용 (원)</label><input type="number" id="etcCost" value="200000" oninput="rc()"></div>
+      </div>
+    </div>
+
+    <div class="total-box" style="background:var(--gray-bg);border-color:var(--border2)">
+      <span class="t-label">비인건성 판관비 합계</span>
+      <span class="t-val" id="tt-sganon">-</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SG&A 인건비 ===== -->
+<div class="page" id="page-labor">
+  <div class="page-header">
+    <h2>👥 SG&A — 인건비성 판관비</h2>
+    <p>BG (직영) / TB (협력·파트) 인건비를 입력합니다</p>
+  </div>
+  <div class="page-body">
+    <div class="card">
+      <div class="sec-label" style="background:var(--blue-bg);color:var(--blue);margin-bottom:12px">① BG 인건비 (직영)</div>
+      <div class="g2">
+        <div class="field"><label>BG 인건비 합계 (원)</label><input type="number" id="bgLabor" value="12000000" oninput="rc()"></div>
+        <div style="display:flex;align-items:flex-end">
+          <div class="subtotal-box" style="flex:1"><span class="st-label">BG 소계</span><span class="st-val" style="color:var(--blue)" id="st-bg">-</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec-label" style="background:var(--teal-bg);color:var(--teal);margin-bottom:12px">② TB 인건비 (협력/파트)</div>
+      <div class="g2">
+        <div class="field"><label>TB 인건비 합계 (원)</label><input type="number" id="tbLabor" value="8000000" oninput="rc()"></div>
+        <div style="display:flex;align-items:flex-end">
+          <div class="subtotal-box" style="flex:1"><span class="st-label">TB 소계</span><span class="st-val" style="color:var(--teal)" id="st-tb">-</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="total-box" style="background:var(--blue-bg);border-color:var(--blue)">
+      <span class="t-label" style="color:var(--blue)">인건비성 판관비 합계</span>
+      <span class="t-val" style="color:var(--blue)" id="tt-labor">-</span>
+    </div>
+
+    <div class="divider"></div>
+    <div style="padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px">
+      <div style="font-size:11px;font-weight:600;margin-bottom:8px">📌 총 비용 구성 요약</div>
+      <div id="cost-summary" style="font-size:12px;color:var(--text2);line-height:1.8"></div>
+      <div style="margin-top:8px;font-size:16px;font-weight:700" id="cost-grand">-</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== P&L ===== -->
+<div class="page" id="page-pl">
+  <div class="page-header">
+    <h2>📊 P&L — 월간 손익계산서</h2>
+    <p>모든 입력값이 자동으로 반영됩니다</p>
+  </div>
+  <div class="page-body">
+    <div class="card">
+      <table class="pl-table" id="pl-table"></table>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 대시보드 ===== -->
+<div class="page" id="page-dash">
+  <div class="page-header">
+    <h2>🎯 대시보드</h2>
+    <p>핵심 지표 · 체크리스트 · 비용 구조</p>
+  </div>
+  <div class="page-body">
+    <div class="kpi-grid" id="kpi-grid"></div>
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--amber)"></span>BEP 달성률</div>
+      <div class="bep-bar-wrap">
+        <div class="bep-bar-bg"><div class="bep-bar-fill" id="bep-bar" style="width:0%;background:var(--profit)"></div></div>
+        <div class="bep-labels"><span>0</span><span id="bep-mid">BEP</span><span id="bep-right">매출</span></div>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--red)"></span>비용 구조</div>
+        <div class="chart-wrap"><canvas id="costChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--blue)"></span>매출 구조</div>
+        <div class="chart-wrap"><canvas id="revChart"></canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--green)"></span>경영 판단 체크리스트</div>
+      <div id="checklist"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 아카이브 ===== -->
+<div class="page" id="page-archive">
+  <div class="page-header">
+    <h2>📁 월별 아카이브</h2>
+    <p>월별 예측·실적을 저장하고 누적 추이를 확인합니다</p>
+  </div>
+  <div class="page-body">
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--navy)"></span>현재 입력값 저장</div>
+      <div class="arch-month-bar">
+        <select id="arch-year"><option value="2025">2025년</option><option value="2026" selected>2026년</option><option value="2027">2027년</option></select>
+        <select id="arch-month">
+          <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+          <option value="4" selected>4월</option><option value="5">5월</option><option value="6">6월</option>
+          <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
+          <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+        </select>
+        <select id="arch-type"><option value="예측">예측</option><option value="실적">실적</option></select>
+        <button class="btn btn-primary" onclick="saveArchive()">저장</button>
+      </div>
+      <div id="arch-msg" style="font-size:11px;color:var(--profit);display:none;margin-bottom:6px"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--navy)"></span>아카이브 목록 <span style="font-weight:400;color:var(--text3);font-size:10px">클릭 시 INPUT에 불러오기</span></div>
+      <div id="arch-list"></div>
+    </div>
+
+    <div class="card" id="arch-chart-card" style="display:none">
+      <div class="card-title"><span class="dot" style="background:var(--blue)"></span>월별 추이</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="archChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<script>
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+let tenants = [{id:1,name:'입점업체 1',rev:0},{id:2,name:'입점업체 2',rev:0}];
+let tenantCosts = [{id:1,name:'입점업체 1 수수료',amt:0},{id:2,name:'입점업체 2 수수료',amt:0}];
+let nextTid=3, nextTcid=3;
+let costChartInst=null, revChartInst=null, archChartInst=null;
+
+// ═══════════════════════════════════════════════════
+// NAV
+// ═══════════════════════════════════════════════════
+function go(name, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('#nav ul li a').forEach(a=>a.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  if(el) el.classList.add('active');
+  else {
+    document.querySelectorAll('#nav ul li a').forEach(a=>{
+      if(a.getAttribute('onclick')&&a.getAttribute('onclick').includes("'"+name+"'")) a.classList.add('active');
+    });
+  }
+  if(name==='dash'){ renderCharts(); }
+  if(name==='archive'){ renderArchList(); }
+  window.scrollTo(0,0);
+}
+
+// ═══════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════
+const g = id => parseFloat(document.getElementById(id)?.value)||0;
+const fmt = n => {
+  const a=Math.abs(n);
+  if(a>=1e8) return (n/1e8).toFixed(1)+'억원';
+  if(a>=1e7) return (n/1e4).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')+' 만원';
+  if(a>=1e4) return Math.round(n/1e4)+'만원';
+  return Math.round(n).toLocaleString()+'원';
+};
+const fmtW = n => Math.round(n).toLocaleString()+'원';
+const setEl = (id, val, color) => {
+  const el=document.getElementById(id); if(!el) return;
+  el.textContent=val; if(color) el.style.color=color;
+};
+
+// ═══════════════════════════════════════════════════
+// TENANTS
+// ═══════════════════════════════════════════════════
+function renderTenants() {
+  const el=document.getElementById('tenant-list'); if(!el) return;
+  el.innerHTML = tenants.map(t=>`
+    <div class="tenant-row">
+      <div class="t-name" style="flex:1"><input type="text" value="${t.name}" onchange="tenants.find(x=>x.id===${t.id}).name=this.value;renderTenants()" style="width:100%"></div>
+      <div class="t-amt"><input type="number" value="${t.rev}" oninput="tenants.find(x=>x.id===${t.id}).rev=parseFloat(this.value)||0;rc()" style="width:140px"></div>
+      <span class="t-result" style="color:var(--coral)">${fmtW(t.rev)}</span>
+      <button class="t-del" onclick="removeTenant(${t.id})">✕</button>
+    </div>`).join('');
+  const btn=document.getElementById('btn-add-tenant');
+  if(btn) btn.style.opacity=tenants.length>=8?'.4':'1';
+}
+function addTenant() {
+  if(tenants.length>=8){alert('최대 8개');return;}
+  tenants.push({id:nextTid++,name:'입점업체 '+tenants.length+1,rev:0});
+  renderTenants(); rc();
+}
+function removeTenant(id) {
+  if(tenants.length<=1){alert('최소 1개');return;}
+  tenants=tenants.filter(t=>t.id!==id); renderTenants(); rc();
+}
+const getTenantTotal = () => tenants.reduce((s,t)=>s+t.rev,0);
+
+function renderTenantCosts() {
+  const el=document.getElementById('tenantcost-list'); if(!el) return;
+  el.innerHTML = tenantCosts.map(t=>`
+    <div class="tenant-row">
+      <div class="t-name" style="flex:1"><input type="text" value="${t.name}" onchange="tenantCosts.find(x=>x.id===${t.id}).name=this.value" style="width:100%"></div>
+      <div class="t-amt"><input type="number" value="${t.amt}" oninput="tenantCosts.find(x=>x.id===${t.id}).amt=parseFloat(this.value)||0;rc()" style="width:140px"></div>
+      <span class="t-result" style="color:var(--red)">${fmtW(t.amt)}</span>
+      <button class="t-del" onclick="removeTenantCost(${t.id})">✕</button>
+    </div>`).join('');
+  const btn=document.getElementById('btn-add-tc');
+  if(btn) btn.style.opacity=tenantCosts.length>=8?'.4':'1';
+}
+function addTenantCost() {
+  if(tenantCosts.length>=8){alert('최대 8개');return;}
+  tenantCosts.push({id:nextTcid++,name:'입점업체 '+tenantCosts.length+1+' 수수료',amt:0});
+  renderTenantCosts(); rc();
+}
+function removeTenantCost(id) {
+  if(tenantCosts.length<=1){alert('최소 1개');return;}
+  tenantCosts=tenantCosts.filter(t=>t.id!==id); renderTenantCosts(); rc();
+}
+const getTcTotal = () => tenantCosts.reduce((s,t)=>s+t.amt,0);
+
+// ═══════════════════════════════════════════════════
+// CALC
+// ═══════════════════════════════════════════════════
+function calc() {
+  const mbsSubNewRev = g('mbsSubNew')*g('mbsSubNewPrice');
+  const mbsSubRenewCnt = Math.round(g('mbsSubExpire')*(g('mbsSubRetain')/100));
+  const mbsSubRenewRev = mbsSubRenewCnt*g('mbsSubRenewPrice');
+  const mbsPeriodNewRev = g('mbsPeriodNew')*g('mbsPeriodNewPrice');
+  const mbsPeriodRenewCnt = Math.round(g('mbsPeriodTarget')*(g('mbsPeriodRenewRate')/100));
+  const mbsPeriodRenewRev = mbsPeriodRenewCnt*g('mbsPeriodRenewPrice');
+  const mbsDayRev = g('mbsDay')*g('mbsDayPrice');
+  const mbsCorp = g('mbsCorp'), mbsOption = g('mbsOption');
+  const mbsTotal = mbsSubNewRev+mbsSubRenewRev+mbsPeriodNewRev+mbsPeriodRenewRev+mbsDayRev+mbsCorp+mbsOption;
+
+  const ptReCnt = Math.round(g('ptReTarget')*(g('ptReRate')/100));
+  const ptReRev = ptReCnt*g('ptRePrice');
+  const ptTrialRev = g('ptTrialSell')*g('ptTrialPrice');
+  const ptConvCnt = Math.round(g('ptTrialSell')*(g('ptConvRate')/100));
+  const ptConvRev = ptConvCnt*g('ptConvPrice');
+  const ptOrgRev = g('ptOrganic')*g('ptOrganicPrice');
+  const ptRentalRev = g('ptRental');
+  const ptTotal = ptReRev+ptTrialRev+ptConvRev+ptOrgRev+ptRentalRev;
+
+  const tbTotal = g('tbBasic')+g('tbPremium')+g('tbPromo');
+  const pbTotal = mbsTotal+ptTotal+tbTotal;
+  const tenantTotal = getTenantTotal();
+  const commTotal = g('commRev')+g('etcRev');
+  const totalRev = pbTotal+tenantTotal+commTotal;
+
+  const ptCoach = g('ptCoachTotal');
+  const tcTotal = getTcTotal();
+  const payFee = totalRev*0.0216;
+  const cos = ptCoach+tcTotal+payFee;
+
+  const imgwan = g('rent')+g('mgmtFee')+g('electric')+g('water');
+  const sgaNonOther = g('laundry')+g('supplies')+g('repair')+g('marketing')+g('etcCost');
+  const sgaNon = imgwan+sgaNonOther;
+  const bgLabor = g('bgLabor');
+  const tbLabor = g('tbLabor');
+  const sgaLab = bgLabor+tbLabor;
+  const totalCost = cos+sgaNon+sgaLab;
+
+  const gp = totalRev-cos;
+  const gpMargin = totalRev>0?gp/totalRev*100:0;
+  const opIncome = totalRev-totalCost;
+  const opMargin = totalRev>0?opIncome/totalRev*100:0;
+
+  const fixCost = imgwan+bgLabor+tbLabor;
+  const varCost = cos+sgaNonOther;
+  const varRatio = totalRev>0?varCost/totalRev:0;
+  const bepRev = varRatio<1?fixCost/(1-varRatio):Infinity;
+  const bepPct = bepRev>0?Math.min(totalRev/bepRev*100,200):0;
+
+  return {
+    mbsSubNewRev, mbsSubRenewCnt, mbsSubRenewRev,
+    mbsPeriodNewRev, mbsPeriodRenewCnt, mbsPeriodRenewRev,
+    mbsDayRev, mbsCorp, mbsOption, mbsTotal,
+    ptReCnt, ptReRev, ptTrialRev, ptConvCnt, ptConvRev,
+    ptOrgRev, ptRentalRev, ptTotal,
+    tbTotal, pbTotal, tenantTotal, commTotal, totalRev,
+    ptCoach, tcTotal, payFee, cos,
+    imgwan, sgaNonOther, sgaNon, bgLabor, tbLabor, sgaLab,
+    totalCost, gp, gpMargin, opIncome, opMargin, bepRev, bepPct,
+  };
+}
+
+// ═══════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════
+function rc() {
+  const d = calc();
+
+  // MBS page hints
+  setEl('h-subNew', `→ 신규 구독 매출: ${fmtW(d.mbsSubNewRev)}`);
+  setEl('h-subRenew', `→ 연장 예상: ${d.mbsSubRenewCnt}명 × 단가 = ${fmtW(d.mbsSubRenewRev)}`);
+  setEl('h-periodNew', `→ 기간 신규 매출: ${fmtW(d.mbsPeriodNewRev)}`);
+  setEl('h-periodRenew', `→ 재등록 예상: ${d.mbsPeriodRenewCnt}명 = ${fmtW(d.mbsPeriodRenewRev)}`);
+  setEl('st-subTotal', fmtW(d.mbsSubNewRev+d.mbsSubRenewRev));
+  setEl('st-periodTotal', fmtW(d.mbsPeriodNewRev+d.mbsPeriodRenewRev));
+  setEl('st-day', fmtW(d.mbsDayRev));
+  setEl('tt-mbs', fmtW(d.mbsTotal));
+
+  // PT hints
+  setEl('h-ptRe', `→ 재등록 예상: ${d.ptReCnt}명 = ${fmtW(d.ptReRev)}`);
+  setEl('h-ptConv', `→ 전환 예상: ${d.ptConvCnt}명 = ${fmtW(d.ptConvRev)}`);
+  setEl('st-ptRe', fmtW(d.ptReRev));
+  setEl('st-ptTrial', fmtW(d.ptTrialRev));
+  setEl('st-ptConv', fmtW(d.ptConvRev));
+  setEl('tt-pt', fmtW(d.ptTotal));
+
+  // TB
+  setEl('tt-tb', fmtW(d.tbTotal));
+  setEl('tt-pb', fmtW(d.pbTotal));
+  setEl('pb-break', `MBS ${fmt(d.mbsTotal)} + PT ${fmt(d.ptTotal)} + TB ${fmt(d.tbTotal)}`);
+
+  // 입점업체
+  setEl('tt-tenant', fmtW(d.tenantTotal));
+  const rs = document.getElementById('rev-summary');
+  if(rs) rs.innerHTML = `PB 매출 (핸들링) &nbsp;<strong>${fmtW(d.pbTotal)}</strong><br>입점업체 &nbsp;<strong>${fmtW(d.tenantTotal)}</strong><br>기타 &nbsp;<strong>${fmtW(d.commTotal)}</strong>`;
+  setEl('rev-grand', `총 매출: ${fmtW(d.totalRev)}`);
+
+  // COS
+  setEl('st-tc', fmtW(d.tcTotal));
+  setEl('st-payFee', fmtW(Math.round(d.payFee)));
+  setEl('tt-cos', fmtW(Math.round(d.cos)));
+  // update tenant cost display
+  document.querySelectorAll('#tenantcost-list .t-result').forEach((el,i)=>{
+    if(tenantCosts[i]) el.textContent=fmtW(tenantCosts[i].amt);
+  });
+
+  // SG&A
+  setEl('st-imgwan', fmtW(d.imgwan));
+  setEl('tt-sganon', fmtW(d.sgaNon));
+
+  // Labor
+  setEl('st-bg', fmtW(d.bgLabor));
+  setEl('st-tb', fmtW(d.tbLabor));
+  setEl('tt-labor', fmtW(d.sgaLab));
+  const cs = document.getElementById('cost-summary');
+  if(cs) cs.innerHTML = `COS &nbsp;<strong>${fmtW(Math.round(d.cos))}</strong><br>비인건성 SGA &nbsp;<strong>${fmtW(d.sgaNon)}</strong><br>인건비성 SGA &nbsp;<strong>${fmtW(d.sgaLab)}</strong>`;
+  setEl('cost-grand', `총 비용: ${fmtW(Math.round(d.totalCost))}`);
+
+  renderPL(d);
+  renderDash(d);
+}
+
+// ── P&L 테이블 ──
+function renderPL(d) {
+  const t = document.getElementById('pl-table'); if(!t) return;
+  const col = (v, cls='', color='') => `<td style="color:${color}">${v}</td>`;
+  const row = (label, val, cls='', color='', indent=0) => {
+    const pad = indent ? `padding-left:${indent*16}px` : '';
+    return `<tr class="${cls}"><td style="${pad}">${label}</td>${col(fmtW(val), '', color)}</tr>`;
+  };
+  const prow = (label, val, cls='', color='', indent=0) => {
+    const pad = indent ? `padding-left:${indent*16}px` : '';
+    return `<tr class="${cls}"><td style="${pad}">${label}</td><td style="text-align:right;color:${color}">${val.toFixed(1)}%</td></tr>`;
+  };
+  const srow = (label, bg, color='#fff') =>
+    `<tr class="pl-row-section"><td colspan="2" style="background:${bg};color:${color};font-weight:600;padding:8px 8px 6px">${label}</td></tr>`;
+
+  const tenantRows = tenants.map(t=>row(`∟ ${t.name}`, t.rev, 'pl-row-detail2', '', 0)).join('');
+  const tcRows = tenantCosts.map(t=>row(`∟ ${t.name}`, t.amt, 'pl-row-detail2', '', 0)).join('');
+
+  t.innerHTML = `
+    ${srow('▶  SALES TOTAL', '#1565C0')}
+    <tr class="pl-row-sub"><td style="background:#E3F2FD;padding:6px 8px">MBS 매출</td><td style="background:#E3F2FD;text-align:right;font-weight:600;color:#1565C0">${fmtW(d.mbsTotal)}</td></tr>
+    ${row('구독 신규 매출', d.mbsSubNewRev, 'pl-row-detail', '', 1)}
+    ${row('구독 연장 매출', d.mbsSubRenewRev, 'pl-row-detail', '', 1)}
+    ${row('기간권 신규 매출', d.mbsPeriodNewRev, 'pl-row-detail', '', 1)}
+    ${row('기간권 재등록 매출', d.mbsPeriodRenewRev, 'pl-row-detail', '', 1)}
+    ${row('1일권 매출', d.mbsDayRev, 'pl-row-detail', '', 1)}
+    ${row('법인 매출', d.mbsCorp, 'pl-row-detail', '', 1)}
+    ${row('옵션 매출', d.mbsOption, 'pl-row-detail', '', 1)}
+    <tr class="pl-row-sub"><td style="background:#E0F2F1;padding:6px 8px">PT 매출</td><td style="background:#E0F2F1;text-align:right;font-weight:600;color:#0F6E56">${fmtW(d.ptTotal)}</td></tr>
+    ${row('PT 재등록 매출', d.ptReRev, 'pl-row-detail', '', 1)}
+    ${row('PT 체험권 판매', d.ptTrialRev, 'pl-row-detail', '', 1)}
+    ${row('PT 체험→정규 전환', d.ptConvRev, 'pl-row-detail', '', 1)}
+    ${row('PT 신규 오가닉', d.ptOrgRev, 'pl-row-detail', '', 1)}
+    ${row('PT 대관 매출', d.ptRentalRev, 'pl-row-detail', '', 1)}
+    <tr class="pl-row-sub"><td style="background:#EDE7F6;padding:6px 8px">TB 매출</td><td style="background:#EDE7F6;text-align:right;font-weight:600;color:#4527A0">${fmtW(d.tbTotal)}</td></tr>
+    <tr style="background:#C8E6C9;border-top:2px solid #639922;border-bottom:2px solid #639922"><td style="font-weight:700;color:#2E7D32;padding:8px">★ PB 매출 합계 (MBS+PT+TB)</td><td style="text-align:right;font-weight:700;color:#2E7D32;font-size:13px">${fmtW(d.pbTotal)}</td></tr>
+    <tr class="pl-row-sub"><td style="background:#FBE9E7;padding:6px 8px">입점업체 매출</td><td style="background:#FBE9E7;text-align:right;font-weight:600;color:#7B3811">${fmtW(d.tenantTotal)}</td></tr>
+    ${tenantRows}
+    ${row('기타 매출 (수수료 등)', d.commTotal, 'pl-row-detail')}
+    <tr class="pl-row-total" style="background:#1B3A5C"><td style="color:#fff;font-size:13px;padding:10px 8px">◆ 매출합계</td><td style="color:#fff;text-align:right;font-size:14px;font-weight:700">${fmtW(d.totalRev)}</td></tr>
+
+    <tr><td colspan="2" style="height:8px"></td></tr>
+    ${srow('▶  COST TOTAL', '#B71C1C')}
+    <tr class="pl-row-sub"><td style="background:#FCE4EC;padding:6px 8px">COS (매출원가)</td><td style="background:#FCE4EC;text-align:right;font-weight:600;color:#B71C1C">${fmtW(Math.round(d.cos))}</td></tr>
+    ${row('PT 강사료', d.ptCoach, 'pl-row-detail', '', 1)}
+    ${row('입점업체 수수료 소계', d.tcTotal, 'pl-row-detail', '', 1)}
+    ${tcRows}
+    ${row('결제수수료 (총매출×2.16%)', Math.round(d.payFee), 'pl-row-detail', '#854F0B', 1)}
+    <tr class="pl-row-sub"><td style="background:#F5F5F5;padding:6px 8px">SG&A 비인건성</td><td style="background:#F5F5F5;text-align:right;font-weight:600">${fmtW(d.sgaNon)}</td></tr>
+    ${row('임관비 (임차료+관리비+전기+수도)', d.imgwan, 'pl-row-detail', '', 1)}
+    ${row('세탁비', g('laundry'), 'pl-row-detail', '', 1)}
+    ${row('소모품비', g('supplies'), 'pl-row-detail', '', 1)}
+    ${row('수선비', g('repair'), 'pl-row-detail', '', 1)}
+    ${row('마케팅비', g('marketing'), 'pl-row-detail', '', 1)}
+    ${row('기타비용', g('etcCost'), 'pl-row-detail', '', 1)}
+    <tr class="pl-row-sub"><td style="background:#E8EAF6;padding:6px 8px">SG&A 인건비성</td><td style="background:#E8EAF6;text-align:right;font-weight:600;color:#0D47A1">${fmtW(d.sgaLab)}</td></tr>
+    ${row('BG 인건비 (직영)', d.bgLabor, 'pl-row-detail', '', 1)}
+    ${row('TB 인건비 (협력)', d.tbLabor, 'pl-row-detail', '', 1)}
+    <tr class="pl-row-total" style="background:#B71C1C"><td style="color:#fff;font-size:13px;padding:10px 8px">◆ 비용합계</td><td style="color:#fff;text-align:right;font-size:14px;font-weight:700">${fmtW(Math.round(d.totalCost))}</td></tr>
+
+    <tr><td colspan="2" style="height:8px"></td></tr>
+    <tr class="pl-row-gp" style="background:#E0F7FA"><td style="color:#004D40;padding:10px 8px">■ Gross Profit (매출 − COS)</td><td style="color:#004D40;text-align:right;font-size:14px">${fmtW(Math.round(d.gp))}</td></tr>
+    <tr style="background:#E0F7FA"><td style="color:#004D40;padding:3px 8px 8px 24px;font-size:11px;font-style:italic">GP 마진율 = GP ÷ 매출합계</td><td style="color:#004D40;text-align:right;font-size:11px">${d.gpMargin.toFixed(1)}%</td></tr>
+    <tr><td colspan="2" style="height:4px"></td></tr>
+    <tr class="pl-row-op" style="background:#E8F5E9"><td style="color:#1B5E20;padding:12px 8px">■ 영업이익 (EBIT)</td><td style="color:${d.opIncome>=0?'#1B5E20':'#B71C1C'};text-align:right;font-size:16px">${fmtW(Math.round(d.opIncome))}</td></tr>
+    <tr style="background:#E8F5E9"><td style="color:#1B5E20;padding:3px 8px 10px 24px;font-size:11px;font-style:italic">영업이익률</td><td style="color:${d.opIncome>=0?'#1B5E20':'#B71C1C'};text-align:right;font-size:11px">${d.opMargin.toFixed(1)}%</td></tr>
+
+    <tr><td colspan="2" style="height:8px"></td></tr>
+    <tr style="background:#FFFFF9"><td style="font-weight:600;padding:8px;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#5F5E5A" colspan="2">BEP 분석</td></tr>
+    ${row('BEP 매출 = 고정비 ÷ (1−변동비율)', Math.round(d.bepRev), '', '#854F0B')}
+    ${row('현 매출 대비 잔여/초과', Math.round(d.totalRev-d.bepRev), '', d.totalRev>=d.bepRev?'#1B5E20':'#B71C1C')}
+    <tr><td>BEP 달성 여부</td><td style="text-align:right;font-weight:700;font-size:13px;color:${d.opIncome>=0?'#1B5E20':'#B71C1C'}">${d.opIncome>=0?'✅ BEP 달성':'❌ BEP 미달'}</td></tr>
+  `;
+}
+
+// ── 대시보드 ──
+function renderDash(d) {
+  if(!d) d=calc();
+  const lsh = d.totalRev>0?d.sgaLab/d.totalRev*100:0;
+  const rsh = d.totalRev>0?d.imgwan/d.totalRev*100:0;
+  const cosRatio = d.totalRev>0?d.cos/d.totalRev*100:0;
+
+  // KPI
+  const kpis = [
+    {l:'총 매출', v:fmt(d.totalRev), s:'전체 매출합계', c:'var(--navy)'},
+    {l:'PB 매출 (핸들링)', v:fmt(d.pbTotal), s:(d.totalRev>0?(d.pbTotal/d.totalRev*100).toFixed(0)+'%')+'  전체 대비', c:'var(--green)'},
+    {l:'Gross Profit', v:fmt(d.gp), s:'GP 마진율 '+d.gpMargin.toFixed(1)+'%', c:d.gpMargin>=50?'var(--profit)':'var(--red)'},
+    {l:'영업이익', v:fmt(d.opIncome), s:'이익률 '+d.opMargin.toFixed(1)+'%', c:d.opIncome>=0?'var(--profit)':'var(--red)'},
+    {l:'BEP 달성', v:d.opIncome>=0?'달성 ✅':'미달 ❌', s:d.bepPct.toFixed(0)+'% 달성', c:d.opIncome>=0?'var(--profit)':'var(--red)'},
+    {l:'인건비 비중', v:lsh.toFixed(1)+'%', s:'매출 대비', c:lsh>45?'var(--red)':lsh>38?'var(--amber)':'var(--profit)'},
+    {l:'임관비 비중', v:rsh.toFixed(1)+'%', s:'매출 대비', c:rsh>25?'var(--red)':'var(--profit)'},
+    {l:'COS 비중', v:cosRatio.toFixed(1)+'%', s:'매출 대비', c:cosRatio>30?'var(--red)':'var(--profit)'},
+  ];
+  const grid = document.getElementById('kpi-grid'); if(!grid) return;
+  grid.innerHTML = kpis.map(k=>`
+    <div class="kpi-card">
+      <div class="kl">${k.l}</div>
+      <div class="kv" style="color:${k.c}">${k.v}</div>
+      <div class="ks">${k.s}</div>
+    </div>`).join('');
+
+  // BEP 바
+  const bepBar = document.getElementById('bep-bar');
+  if(bepBar){ bepBar.style.width=Math.min(d.bepPct,100)+'%'; bepBar.style.background=d.opIncome>=0?'var(--profit)':'var(--red)'; }
+  setEl('bep-mid', 'BEP '+fmt(Math.round(d.bepRev)));
+  setEl('bep-right', '매출 '+fmt(d.totalRev));
+
+  // 체크리스트
+  const ptShare = d.totalRev>0?d.ptTotal/d.totalRev*100:0;
+  const checks = [
+    {l:'BEP 달성', ok:d.opIncome>=0, note:d.opIncome>=0?'흑자 운영':fmtW(Math.round(d.bepRev-d.totalRev))+' 부족'},
+    {l:'GP 마진율 ≥ 50%', ok:d.gpMargin>=50, note:d.gpMargin.toFixed(1)+'%'},
+    {l:'COS 비중 ≤ 30%', ok:cosRatio<=30, note:cosRatio.toFixed(1)+'%'},
+    {l:'인건비 비중 ≤ 45%', ok:lsh<=45, note:lsh.toFixed(1)+'%'},
+    {l:'임관비 비중 ≤ 25%', ok:rsh<=25, note:rsh.toFixed(1)+'%'},
+    {l:'PT 매출 비중 ≥ 25%', ok:ptShare>=25, note:ptShare.toFixed(1)+'%'},
+    {l:'MBS 구독 잔존율 ≥ 80%', ok:g('mbsSubRetain')>=80, note:g('mbsSubRetain')+'%'},
+    {l:'PT 체험→정규 전환율 ≥ 35%', ok:g('ptConvRate')>=35, note:g('ptConvRate')+'%'},
+  ];
+  const cl = document.getElementById('checklist'); if(!cl) return;
+  cl.innerHTML = checks.map(c=>`
+    <div class="check-row">
+      <span>${c.l}</span>
+      <span class="check-badge ${c.ok?'ok':'ng'}">${c.ok?'✓':'✗'} ${c.note}</span>
+    </div>`).join('');
+}
+
+function renderCharts() {
+  const d = calc();
+  if(costChartInst){costChartInst.destroy();costChartInst=null;}
+  if(revChartInst){revChartInst.destroy();revChartInst=null;}
+  const ctx1 = document.getElementById('costChart');
+  const ctx2 = document.getElementById('revChart');
+  if(ctx1) costChartInst = new Chart(ctx1,{type:'doughnut',data:{
+    labels:['COS','임관비','비인건성기타','BG인건비','TB인건비'],
+    datasets:[{data:[Math.round(d.cos/1000),Math.round(d.imgwan/1000),Math.round(d.sgaNonOther/1000),Math.round(d.bgLabor/1000),Math.round(d.tbLabor/1000)],backgroundColor:['#EF5350','#78909C','#FFA726','#1565C0','#00796B'],borderWidth:0}]
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:12}}}}});
+  if(ctx2) revChartInst = new Chart(ctx2,{type:'doughnut',data:{
+    labels:['MBS','PT','TB','입점업체','기타'],
+    datasets:[{data:[Math.round(d.mbsTotal/1000),Math.round(d.ptTotal/1000),Math.round(d.tbTotal/1000),Math.round(d.tenantTotal/1000),Math.round(d.commTotal/1000)],backgroundColor:['#1565C0','#0F6E56','#4527A0','#7B3811','#78909C'],borderWidth:0}]
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:12}}}}});
+}
+
+// ═══════════════════════════════════════════════════
+// ARCHIVE
+// ═══════════════════════════════════════════════════
+function getSnap() {
+  const s={};
+  ['mbsSubNew','mbsSubNewPrice','mbsSubExpire','mbsSubRetain','mbsSubRenewPrice',
+   'mbsPeriodNew','mbsPeriodNewPrice','mbsPeriodTarget','mbsPeriodRenewRate','mbsPeriodRenewPrice',
+   'mbsDay','mbsDayPrice','mbsCorp','mbsOption',
+   'ptReTarget','ptReRate','ptRePrice','ptTrialSell','ptTrialPrice','ptConvRate','ptConvPrice',
+   'ptOrganic','ptOrganicPrice','ptRental','tbBasic','tbPremium','tbPromo','commRev','etcRev',
+   'ptCoachTotal','rent','mgmtFee','electric','water',
+   'laundry','supplies','repair','marketing','etcCost','bgLabor','tbLabor'
+  ].forEach(f=>s[f]=g(f));
+  s._tenants=JSON.parse(JSON.stringify(tenants));
+  s._tenantCosts=JSON.parse(JSON.stringify(tenantCosts));
+  return s;
+}
+function loadArch(){try{return JSON.parse(localStorage.getItem('fitness_pl_v5')||'[]');}catch{return[];}}
+function saveArch(arr){try{localStorage.setItem('fitness_pl_v5',JSON.stringify(arr));}catch{alert('저장 실패: 브라우저 저장 용량 초과');}}
+
+function saveArchive() {
+  const year=document.getElementById('arch-year').value;
+  const month=document.getElementById('arch-month').value;
+  const type=document.getElementById('arch-type').value;
+  const d=calc();
+  const entry={id:Date.now(),year:parseInt(year),month:parseInt(month),type,
+    label:year+'년 '+month+'월 ('+type+')',
+    savedAt:new Date().toLocaleString('ko-KR'),
+    snapshot:getSnap(),
+    summary:{totalRev:Math.round(d.totalRev),pbTotal:Math.round(d.pbTotal),
+      mbsTotal:Math.round(d.mbsTotal),ptTotal:Math.round(d.ptTotal),
+      tbTotal:Math.round(d.tbTotal),tenantTotal:Math.round(d.tenantTotal),
+      cos:Math.round(d.cos),totalCost:Math.round(d.totalCost),
+      gp:Math.round(d.gp),gpMargin:parseFloat(d.gpMargin.toFixed(1)),
+      opIncome:Math.round(d.opIncome),opMargin:parseFloat(d.opMargin.toFixed(1)),
+      bepAchieved:d.opIncome>=0,bepPct:parseFloat(d.bepPct.toFixed(1)),
+      mbsSubRetain:g('mbsSubRetain'),ptConvRate:g('ptConvRate')}};
+  const arr=loadArch();
+  const ei=arr.findIndex(a=>a.year===entry.year&&a.month===entry.month&&a.type===entry.type);
+  if(ei>=0){if(!confirm(entry.label+' 데이터가 이미 있습니다. 덮어쓰시겠습니까?'))return; arr[ei]=entry;}
+  else arr.push(entry);
+  arr.sort((a,b)=>a.year*100+a.month-(b.year*100+b.month));
+  saveArch(arr);
+  const msg=document.getElementById('arch-msg');
+  if(msg){msg.textContent='✓ '+entry.label+' 저장 완료 ('+entry.savedAt+')';msg.style.display='block';setTimeout(()=>msg.style.display='none',3000);}
+  renderArchList();
+}
+
+function loadFromArch(id) {
+  const entry=loadArch().find(a=>a.id===id); if(!entry) return;
+  const s=entry.snapshot;
+  Object.keys(s).forEach(f=>{
+    if(f.startsWith('_')) return;
+    const el=document.getElementById(f); if(el) el.value=s[f];
+  });
+  if(s._tenants){tenants=JSON.parse(JSON.stringify(s._tenants));nextTid=Math.max(...tenants.map(t=>t.id))+1;renderTenants();}
+  if(s._tenantCosts){tenantCosts=JSON.parse(JSON.stringify(s._tenantCosts));nextTcid=Math.max(...tenantCosts.map(t=>t.id))+1;renderTenantCosts();}
+  rc();
+  alert(entry.label+' 데이터를 불러왔습니다. MBS 탭에서 확인하세요.');
+}
+function delArch(id,e) {
+  e.stopPropagation();
+  if(!confirm('삭제하시겠습니까?')) return;
+  saveArch(loadArch().filter(a=>a.id!==id));
+  renderArchList();
+}
+
+function renderArchList() {
+  const arr=loadArch();
+  const el=document.getElementById('arch-list'); if(!el) return;
+  if(!arr.length){el.innerHTML='<div class="empty-state">저장된 데이터가 없습니다.<br>위에서 현재 입력값을 저장해보세요.</div>';document.getElementById('arch-chart-card').style.display='none';return;}
+  el.innerHTML=arr.map(a=>`
+    <div class="arch-item" onclick="loadFromArch(${a.id})">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="ai-title">${a.label}</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="check-badge ${a.summary.bepAchieved?'ok':'ng'}">${a.summary.bepAchieved?'BEP 달성':'BEP 미달'}</span>
+          <button class="btn btn-sm btn-danger" onclick="delArch(${a.id},event)" style="padding:3px 8px">삭제</button>
+        </div>
+      </div>
+      <div class="ai-meta">
+        <span>총 매출 <strong>${fmt(a.summary.totalRev)}</strong></span>
+        <span style="color:var(--green)">PB <strong>${fmt(a.summary.pbTotal)}</strong></span>
+        <span>GP <strong>${a.summary.gpMargin}%</strong></span>
+        <span style="color:${a.summary.opIncome>=0?'var(--profit)':'var(--red)'}">영업이익 <strong>${fmt(a.summary.opIncome)} (${a.summary.opMargin}%)</strong></span>
+        <span style="color:var(--text3)">${a.savedAt}</span>
+      </div>
+    </div>`).join('');
+  if(arr.length>=2){
+    document.getElementById('arch-chart-card').style.display='block';
+    renderArchChart(arr);
+  }
+}
+
+function renderArchChart(arr) {
+  if(archChartInst){archChartInst.destroy();archChartInst=null;}
+  const ctx=document.getElementById('archChart'); if(!ctx) return;
+  archChartInst=new Chart(ctx,{type:'bar',data:{
+    labels:arr.map(a=>a.year%100+'년 '+a.month+'월\n('+a.type+')'),
+    datasets:[
+      {label:'PB 매출',data:arr.map(a=>Math.round(a.summary.pbTotal/10000)),backgroundColor:'#1565C0'},
+      {label:'총 비용',data:arr.map(a=>Math.round(a.summary.totalCost/10000)),backgroundColor:'rgba(183,28,28,.3)'},
+      {label:'영업이익',data:arr.map(a=>Math.round(a.summary.opIncome/10000)),backgroundColor:arr.map(a=>a.summary.opIncome>=0?'#1B5E20':'#B71C1C')},
+    ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{font:{size:10},boxWidth:12}}},
+    scales:{y:{ticks:{callback:v=>v+'만'}}}}});
+}
+
+// ── INIT ──
+renderTenants();
+renderTenantCosts();
+rc();
+renderArchList();
+</script>
+</body>
+</html>
