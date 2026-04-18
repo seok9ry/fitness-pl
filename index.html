@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>피트니스 P&L 시뮬레이터</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:#F7F6F3;color:#1A1915;font-size:13px;display:flex;min-height:100vh}
+#nav{width:200px;background:#1B3A5C;color:#fff;display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:100}
+#nav .logo{padding:20px 16px 12px;border-bottom:1px solid rgba(255,255,255,.12)}
+#nav .logo h1{font-size:13px;font-weight:600;line-height:1.4}
+#nav .logo p{font-size:10px;color:rgba(255,255,255,.5);margin-top:2px}
+#nav ul{list-style:none;padding:8px 0;flex:1}
+#nav ul li a{display:flex;align-items:center;gap:8px;padding:9px 16px;font-size:12px;color:rgba(255,255,255,.7);text-decoration:none;border-left:3px solid transparent;cursor:pointer}
+#nav ul li a:hover{background:rgba(255,255,255,.08);color:#fff}
+#nav ul li a.active{background:rgba(255,255,255,.12);color:#fff;border-left-color:#90CAF9}
+.nav-section{font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.35);padding:12px 16px 4px}
+#nav .calc-bar{padding:12px 16px;border-top:1px solid rgba(255,255,255,.12)}
+#nav .calc-bar button{width:100%;padding:8px;background:#1565C0;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer}
+#main{margin-left:200px;flex:1}
+.page{display:none;flex-direction:column}
+.page.active{display:flex}
+.ph{background:#fff;border-bottom:1px solid #E5E4E0;padding:20px 28px 16px;position:sticky;top:0;z-index:50}
+.ph h2{font-size:18px;font-weight:600}
+.ph p{font-size:12px;color:#6B6A66;margin-top:3px}
+.pb{padding:24px 28px;flex:1}
+.card{background:#fff;border:1px solid #E5E4E0;border-radius:8px;padding:18px 20px;margin-bottom:16px}
+.sl{display:inline-block;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;margin-bottom:12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
+.fi{display:flex;flex-direction:column;gap:4px}
+.fi label{font-size:11px;color:#6B6A66}
+.fi input{padding:7px 10px;border:1px solid #D0CFC9;border-radius:6px;font-size:12px;width:100%}
+.fi input:focus{outline:none;border-color:#1565C0}
+.hint{font-size:11px;color:#1565C0;font-style:italic;margin-top:2px;min-height:16px}
+.sub{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;background:#F5F5F5;border-radius:6px;margin-top:8px}
+.sub .la{font-size:11px;color:#6B6A66}
+.sub .va{font-size:14px;font-weight:600}
+.tbox{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:8px;margin-top:4px;border:1.5px solid}
+.tbox .tl{font-size:12px;font-weight:600}
+.tbox .tv{font-size:18px;font-weight:700}
+.pbbox{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:8px;background:#C8E6C9;border:2px solid #639922;margin-top:8px}
+.tr-row{display:flex;align-items:center;gap:8px;padding:6px 8px;background:#F5F5F5;border-radius:6px;margin-bottom:5px;border:1px solid #E5E4E0}
+.tr-row .tn{flex:1}
+.tr-row .tn input{width:100%;font-size:11px;padding:3px 6px;border:1px solid transparent;border-radius:4px;background:transparent}
+.tr-row .tn input:focus{background:#fff;border-color:#D0CFC9}
+.tr-row .ta input{width:130px;font-size:12px;padding:4px 7px;border:1px solid #D0CFC9;border-radius:4px}
+.tr-row .tv2{font-size:12px;font-weight:600;min-width:80px;text-align:right}
+.tr-row .td2{background:none;border:none;cursor:pointer;color:#B71C1C;font-size:13px;padding:2px 6px}
+.add-btn{display:flex;align-items:center;gap:5px;padding:6px 12px;border:1px dashed #D0CFC9;border-radius:6px;background:none;font-size:11px;color:#6B6A66;cursor:pointer;margin-top:4px}
+.auto-box{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#FFF9C4;border:1px solid #EF9F27;border-radius:8px;margin-bottom:4px}
+.pl-tb{width:100%;border-collapse:collapse;font-size:12px}
+.pl-tb tr{border-bottom:1px solid #E5E4E0}
+.pl-tb td{padding:6px 8px}
+.pl-tb td:last-child{text-align:right;white-space:nowrap}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.kpi-card{background:#fff;border:1px solid #E5E4E0;border-radius:8px;padding:14px 16px}
+.kpi-card .kl{font-size:10px;color:#6B6A66;margin-bottom:5px}
+.kpi-card .kv{font-size:20px;font-weight:700}
+.kpi-card .ks{font-size:10px;color:#6B6A66;margin-top:3px}
+.cr{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #E5E4E0;font-size:12px}
+.cr:last-child{border-bottom:none}
+.bok{background:#E8F5E9;color:#1B5E20;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.bng{background:#FCE4EC;color:#B71C1C;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.bb-bg{background:#F5F5F5;border-radius:6px;height:12px;overflow:hidden;margin:6px 0}
+.bb-fill{height:100%;border-radius:6px;transition:width .4s}
+.bb-lbl{display:flex;justify-content:space-between;font-size:10px;color:#A09F9A;margin-top:2px}
+.ai{background:#fff;border:1px solid #E5E4E0;border-radius:8px;padding:12px 16px;margin-bottom:8px;cursor:pointer}
+.ai:hover{border-color:#1565C0}
+.ai-t{font-size:13px;font-weight:600}
+.ai-m{font-size:11px;color:#6B6A66;margin-top:4px;display:flex;gap:12px;flex-wrap:wrap}
+.empty{text-align:center;padding:32px;color:#A09F9A;font-size:12px}
+.mb{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.mb select{font-size:12px;padding:6px 10px;border:1px solid #D0CFC9;border-radius:6px}
+.btn{padding:7px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid #D0CFC9;background:#fff}
+.btn-p{background:#1565C0;color:#fff;border-color:#1565C0}
+.btn-s{padding:3px 8px;font-size:11px}
+.btn-d{color:#B71C1C;border-color:#F09595}
+.div{border:none;border-top:1px solid #E5E4E0;margin:20px 0}
+</style>
+</head>
+<body>
+<nav id="nav">
+  <div class="logo"><h1>피트니스 P&L 시뮬레이터</h1><p>단계별 손익 관리</p></div>
+  <ul>
+    <div class="nav-section">매출 입력</div>
+    <li><a id="nav-mbs" onclick="go('mbs')">🏃 MBS 매출</a></li>
+    <li><a id="nav-pt" onclick="go('pt')">💪 PT 매출</a></li>
+    <li><a id="nav-tb" onclick="go('tb')">📋 TB 매출</a></li>
+    <li><a id="nav-tenant" onclick="go('tenant')">🏪 입점업체</a></li>
+    <div class="nav-section">비용 입력</div>
+    <li><a id="nav-cos" onclick="go('cos')">💳 COS 매출원가</a></li>
+    <li><a id="nav-sga" onclick="go('sga')">🏢 SGA 비인건성</a></li>
+    <li><a id="nav-labor" onclick="go('labor')">👥 SGA 인건비</a></li>
+    <div class="nav-section">결과</div>
+    <li><a id="nav-pl" onclick="go('pl')">📊 P&L 손익계산서</a></li>
+    <li><a id="nav-dash" onclick="go('dash')">🎯 대시보드</a></li>
+    <li><a id="nav-archive" onclick="go('archive')">📁 월별 아카이브</a></li>
+  </ul>
+  <div class="calc-bar"><button onclick="go('pl')">→ P&L 바로보기</button></div>
+</nav>
+<main id="main">
+
+<div class="page active" id="page-mbs">
+  <div class="ph"><h2>🏃 MBS 매출 — 회원권</h2><p>구독 / 기간 / 1일권 / 법인 / 옵션</p></div>
+  <div class="pb">
+    <div class="card">
+      <div class="sl" style="background:#E3F2FD;color:#1565C0">① 구독 매출</div>
+      <div class="g4">
+        <div class="fi"><label>신규 구독자 (명)</label><input type="number" id="mbsSubNew" value="30" oninput="rc()"><div class="hint" id="h-subNew"></div></div>
+        <div class="fi"><label>신규 구독 객단가 (원)</label><input type="number" id="mbsSubNewPrice" value="85000" oninput="rc()"></div>
+        <div class="fi"><label>구독 만료 대상자 (명)</label><input type="number" id="mbsSubExpire" value="180" oninput="rc()"></div>
+        <div class="fi"><label>구독 잔존율 (%)</label><input type="number" id="mbsSubRetain" value="82" oninput="rc()"><div class="hint" id="h-subRenew"></div></div>
+      </div>
+      <div class="g2" style="margin-top:8px">
+        <div class="fi"><label>연장 객단가 (원)</label><input type="number" id="mbsSubRenewPrice" value="85000" oninput="rc()"></div>
+        <div></div>
+      </div>
+      <div class="sub"><span class="la">구독 매출 소계</span><span class="va" style="color:#1565C0" id="st-subTotal">0원</span></div>
+    </div>
+    <div class="card">
+      <div class="sl" style="background:#E3F2FD;color:#1565C0">② 기간 매출</div>
+      <div class="g4">
+        <div class="fi"><label>신규 기간권 결제자 (명)</label><input type="number" id="mbsPeriodNew" value="25" oninput="rc()"><div class="hint" id="h-periodNew"></div></div>
+        <div class="fi"><label>신규 기간권 객단가 (원)</label><input type="number" id="mbsPeriodNewPrice" value="180000" oninput="rc()"></div>
+        <div class="fi"><label>재등록 대상자 (명)</label><input type="number" id="mbsPeriodTarget" value="60" oninput="rc()"></div>
+        <div class="fi"><label>재등록율 (%)</label><input type="number" id="mbsPeriodRenewRate" value="65" oninput="rc()"><div class="hint" id="h-periodRenew"></div></div>
+      </div>
+      <div class="g2" style="margin-top:8px">
+        <div class="fi"><label>재등록 객단가 (원)</label><input type="number" id="mbsPeriodRenewPrice" value="160000" oninput="rc()"></div>
+        <div></div>
+      </div>
+      <div class="sub"><span class="la">기간 매출 소계</span><span class="va" style="color:#1565C0" id="st-periodTotal">0원</span></div>
+    </div>
+    <div class="card">
+      <div class="g2">
+        <div>
+          <div class="sl" style="background:#E3F2FD;color:#1565C0">③ 1일권</div>
+          <div class="g2">
+            <div class="fi"><label>이용자 수 (명)</label><input type="number" id="mbsDay" value="40" oninput="rc()"></div>
+            <div class="fi"><label>객단가 (원)</label><input type="number" id="mbsDayPrice" value="12000" oninput="rc()"></div>
+          </div>
+        </div>
+        <div>
+          <div class="sl" style="background:#E3F2FD;color:#1565C0">④ 법인 / 옵션 (수동)</div>
+          <div class="g2">
+            <div class="fi"><label>법인 매출 (원)</label><input type="number" id="mbsCorp" value="0" oninput="rc()"></div>
+            <div class="fi"><label>옵션 매출 (원)</label><input type="number" id="mbsOption" value="0" oninput="rc()"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tbox" style="background:#E3F2FD;border-color:#1565C0">
+      <span class="tl" style="color:#1565C0">MBS 매출 합계</span>
+      <span class="tv" style="color:#1565C0" id="tt-mbs">0원</span>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-pt">
+  <div class="ph"><h2>💪 PT 매출 — 퍼스널 트레이닝</h2><p>재등록 / 체험권 / 전환 / 오가닉 / 대관</p></div>
+  <div class="pb">
+    <div class="card">
+      <div class="sl" style="background:#E0F2F1;color:#0F6E56">① PT 재등록 매출</div>
+      <div class="g3">
+        <div class="fi"><label>재등록 대상자 (명)</label><input type="number" id="ptReTarget" value="25" oninput="rc()"></div>
+        <div class="fi"><label>재등록율 (%)</label><input type="number" id="ptReRate" value="70" oninput="rc()"><div class="hint" id="h-ptRe"></div></div>
+        <div class="fi"><label>재등록 객단가 (원)</label><input type="number" id="ptRePrice" value="550000" oninput="rc()"></div>
+      </div>
+      <div class="sub"><span class="la">PT 재등록 소계</span><span class="va" style="color:#0F6E56" id="st-ptRe">0원</span></div>
+    </div>
+    <div class="card">
+      <div class="sl" style="background:#E0F2F1;color:#0F6E56">② 체험권 판매 매출</div>
+      <div class="g2">
+        <div class="fi"><label>체험권 판매 수 (명)</label><input type="number" id="ptTrialSell" value="15" oninput="rc()"></div>
+        <div class="fi"><label>체험권 객단가 (원)</label><input type="number" id="ptTrialPrice" value="99000" oninput="rc()"></div>
+      </div>
+      <div class="sub"><span class="la">체험권 소계</span><span class="va" style="color:#0F6E56" id="st-ptTrial">0원</span></div>
+    </div>
+    <div class="card">
+      <div class="sl" style="background:#E0F2F1;color:#0F6E56">③ 체험 → 정규 전환 매출</div>
+      <div class="g2">
+        <div class="fi"><label>전환율 (%)</label><input type="number" id="ptConvRate" value="40" oninput="rc()"><div class="hint" id="h-ptConv"></div></div>
+        <div class="fi"><label>정규 전환 객단가 (원)</label><input type="number" id="ptConvPrice" value="480000" oninput="rc()"></div>
+      </div>
+      <div class="sub"><span class="la">전환 소계</span><span class="va" style="color:#0F6E56" id="st-ptConv">0원</span></div>
+    </div>
+    <div class="card">
+      <div class="g2">
+        <div>
+          <div class="sl" style="background:#E0F2F1;color:#0F6E56">④ 신규 오가닉</div>
+          <div class="g2">
+            <div class="fi"><label>신규 결제자 (명)</label><input type="number" id="ptOrganic" value="8" oninput="rc()"></div>
+            <div class="fi"><label>신규 객단가 (원)</label><input type="number" id="ptOrganicPrice" value="480000" oninput="rc()"></div>
+          </div>
+        </div>
+        <div>
+          <div class="sl" style="background:#E0F2F1;color:#0F6E56">⑤ 대관 매출 (수동)</div>
+          <div class="fi"><label>대관 매출 (원)</label><input type="number" id="ptRental" value="0" oninput="rc()"></div>
+        </div>
+      </div>
+    </div>
+    <div class="tbox" style="background:#E0F2F1;border-color:#0F6E56">
+      <span class="tl" style="color:#0F6E56">PT 매출 합계</span>
+      <span class="tv" style="color:#0F6E56" id="tt-pt">0원</span>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-tb">
+  <div class="ph"><h2>📋 TB 매출 — 프로그램 / 레슨</h2><p>실속 / 프리미엄 / 상시프로모</p></div>
+  <div class="pb">
+    <div class="card">
+      <div class="g3">
+        <div class="fi"><label>실속 매출 (원)</label><input type="number" id="tbBasic" value="3000000" oninput="rc()"></div>
+        <div class="fi"><label>프리미엄 매출 (원)</label><input type="number" id="tbPremium" value="2000000" oninput="rc()"></div>
+        <div class="fi"><label>상시프로모 매출 (원)</label><input type="number" id="tbPromo" value="500000" oninput="rc()"></div>
+      </div>
+    </div>
+    <div class="tbox" style="background:#EDE7F6;border-color:#4527A0">
+      <span class="tl" style="color:#4527A0">TB 매출 합계</span>
+      <span class="tv" style="color:#4527A0" id="tt-tb">0원</span>
+    </div>
+    <div class="pbbox" style="margin-top:16px">
+      <div>
+        <div style="font-size:11px;color:#2E7D32;font-weight:600">PB 매출 합계 (핸들링 가능 매출)</div>
+        <div style="font-size:10px;color:#2E7D32;margin-top:2px" id="pb-break"></div>
+      </div>
+      <span style="font-size:18px;font-weight:700;color:#2E7D32" id="tt-pb">0원</span>
+    </div>
+    <div class="div"></div>
+    <div class="card">
+      <div style="font-size:11px;font-weight:600;margin-bottom:10px;color:#6B6A66">기타 매출</div>
+      <div class="g2">
+        <div class="fi"><label>수수료 수입 (원)</label><input type="number" id="commRev" value="300000" oninput="rc()"></div>
+        <div class="fi"><label>기타 매출 (원)</label><input type="number" id="etcRev" value="0" oninput="rc()"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-tenant">
+  <div class="ph"><h2>🏪 입점업체 매출</h2><p>업체명 수정 가능 · 최대 8개 · 수동 입력</p></div>
+  <div class="pb">
+    <div class="card">
+      <div id="tenant-list"></div>
+      <button class="add-btn" onclick="addTenant()" id="btn-add-tenant">+ 업체 추가 (최대 8개)</button>
+    </div>
+    <div class="tbox" style="background:#FBE9E7;border-color:#7B3811">
+      <span class="tl" style="color:#7B3811">입점업체 합계</span>
+      <span class="tv" style="color:#7B3811" id="tt-tenant">0원</span>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-cos">
+  <div class="ph"><h2>💳 COS — 매출원가</h2><p>PT 강사료 · 입점업체 수수료 · 결제수수료 자동</p></div>
+  <div class="pb">
+    <div class="card">
+      <div class="sl" style="background:#FCE4EC;color:#B71C1C">① PT 강사료 (수동)</div>
+      <div class="g2">
+        <div class="fi"><label>PT 강사료 합계 (원)</label><input type="number" id="ptCoachTotal" value="3500000" oninput="rc()"></div>
+        <div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sl" style="background:#FCE4EC;color:#B71C1C">② 입점업체 수수료 (최대 8개)</div>
+      <div id="tenantcost-list"></div>
+      <button class="add-btn" onclick="addTenantCost()" id="btn-add-tc">+ 업체 추가</button>
+      <div class="sub" style="margin-top:8px"><span class="la">수수료 소계</span><span class="va" style="color:#B71C1C" id="st-tc">0원</span></div>
+    </div>
+    <div class="auto-box">
+      <div>
+        <div style="font-size:12px;font-weight:500">③ 결제수수료 (자동)</div>
+        <div style="font-size:11px;color:#854F0B;margin-top:2px">총 매출 x 2.16% 자동 계산</div>
+      </div>
+      <div style="font-size:20px;font-weight:700;color:#854F0B" id="st-payFee">0원</div>
+    </div>
+    <div class="tbox" style="background:#FCE4EC;border-color:#B71C1C">
+      <span class="tl" style="color:#B71C1C">COS 합계</span>
+      <span class="tv" style="color:#B71C1C" id="tt-cos">0원</span>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-sga">
+  <div class="ph"><h2>🏢 SGA — 비인건성 판관비</h2><p>임관비 / 세탁비 / 소모품비 / 수선비 / 마케팅비 / 기타</p></div>
+  <div class="pb">
+    <div class="card">
+      <div class="sl" style="background:#F5F5F5;color:#424242">① 임관비</div>
+      <div class="g4">
+        <div class="fi"><label>임차료 (원)</label><input type="number" id="rent" value="6000000" oninput="rc()"></div>
+        <div class="fi"><label>고정관리비 (원)</label><input type="number" id="mgmtFee" value="300000" oninput="rc()"></div>
+        <div class="fi"><label>전기료 (원)</label><input type="number" id="electric" value="400000" oninput="rc()"></div>
+        <div class="fi"><label>수도료 (원)</label><input type="number" id="water" value="100000" oninput="rc()"></div>
+      </div>
+      <div class="sub"><span class="la">임관비 소계</span><span class="va" id="st-imgwan">0원</span></div>
+    </div>
+    <div class="card">
+      <div class="sl" style="background:#F5F5F5;color:#424242">② 기타 비용</div>
+      <div class="g3">
+        <div class="fi"><label>세탁비 (원)</label><input type="number" id="laundry" value="150000" oninput="rc()"></div>
+        <div class="fi"><label>소모품비 (원)</label><input type="number" id="supplies" value="300000" oninput="rc()"></div>
+        <div class="fi"><label>수선비 (원)</label><input type="number" id="repair" value="100000" oninput="rc()"></div>
+      </div>
+      <div class="g2" style="margin-top:8px">
+        <div class="fi"><label>마케팅비 (원)</label><input type="number" id="marketing" value="800000" oninput="rc()"></div>
+        <div class="fi"><label>기타비용 (원)</label><input type="number" id="etcCost" value="200000" oninput="rc()"></div>
+      </div>
+    </div>
+    <div class="tbox" style="background:#F5F5F5;border-color:#D0CFC9">
+      <span class="tl">비인건성 판관비 합계</span>
+      <span class="tv" id="tt-sganon">0원</span>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-labor">
+  <div class="ph"><h2>👥 SGA — 인건비성 판관비</h2><p>BG (직영) / TB (협력·파트) 인건비</p></div>
+  <div class="pb">
+    <div class="card">
+      <div class="sl" style="background:#E3F2FD;color:#1565C0">① BG 인건비 (직영)</div>
+      <div class="g2">
+        <div class="fi"><label>BG 인건비 합계 (원)</label><input type="number" id="bgLabor" value="12000000" oninput="rc()"></div>
+        <div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sl" style="background:#E0F2F1;color:#0F6E56">② TB 인건비 (협력/파트)</div>
+      <div class="g2">
+        <div class="fi"><label>TB 인건비 합계 (원)</label><input type="number" id="tbLabor" value="8000000" oninput="rc()"></div>
+        <div></div>
+      </div>
+    </div>
+    <div class="tbox" style="background:#E3F2FD;border-color:#1565C0">
+      <span class="tl" style="color:#1565C0">인건비성 판관비 합계</span>
+      <span class="tv" style="color:#1565C0" id="tt-labor">0원</span>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-pl">
+  <div class="ph"><h2>📊 P&L — 월간 손익계산서</h2><p>모든 입력값이 자동으로 반영됩니다</p></div>
+  <div class="pb"><div class="card"><table class="pl-tb" id="pl-table"></table></div></div>
+</div>
+
+<div class="page" id="page-dash">
+  <div class="ph"><h2>🎯 대시보드</h2><p>핵심 지표 · 체크리스트</p></div>
+  <div class="pb">
+    <div class="kpi-grid" id="kpi-grid"></div>
+    <div class="card">
+      <div style="font-size:11px;font-weight:600;color:#6B6A66;margin-bottom:8px">BEP 달성률</div>
+      <div class="bb-bg"><div class="bb-fill" id="bep-bar" style="width:0%;background:#1B5E20"></div></div>
+      <div class="bb-lbl"><span>0</span><span id="bep-mid">-</span><span id="bep-right">-</span></div>
+    </div>
+    <div class="card">
+      <div style="font-size:11px;font-weight:600;color:#6B6A66;margin-bottom:10px">경영 판단 체크리스트</div>
+      <div id="checklist"></div>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="page-archive">
+  <div class="ph"><h2>📁 월별 아카이브</h2><p>월별 예측·실적을 저장하고 누적 기록합니다</p></div>
+  <div class="pb">
+    <div class="card">
+      <div style="font-size:11px;font-weight:600;color:#6B6A66;margin-bottom:10px">현재 입력값 저장</div>
+      <div class="mb">
+        <select id="arch-year"><option value="2025">2025년</option><option value="2026" selected>2026년</option><option value="2027">2027년</option></select>
+        <select id="arch-month">
+          <option value="1">1월</option><option value="2">2월</option><option value="3">3월</option>
+          <option value="4" selected>4월</option><option value="5">5월</option><option value="6">6월</option>
+          <option value="7">7월</option><option value="8">8월</option><option value="9">9월</option>
+          <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+        </select>
+        <select id="arch-type"><option value="예측">예측</option><option value="실적">실적</option></select>
+        <button class="btn btn-p" onclick="saveArchive()">저장</button>
+      </div>
+      <div id="arch-msg" style="font-size:11px;color:#1B5E20;display:none"></div>
+    </div>
+    <div class="card">
+      <div style="font-size:11px;font-weight:600;color:#6B6A66;margin-bottom:10px">아카이브 목록</div>
+      <div id="arch-list"></div>
+    </div>
+  </div>
+</div>
+
+</main>
+<script>
+var tenants=[{id:1,name:'입점업체 1',rev:0},{id:2,name:'입점업체 2',rev:0}];
+var tenantCosts=[{id:1,name:'입점업체 1 수수료',amt:0},{id:2,name:'입점업체 2 수수료',amt:0}];
+var nextTid=3,nextTcid=3;
+
+function go(name){
+  var pages=document.querySelectorAll('.page');
+  for(var i=0;i<pages.length;i++) pages[i].classList.remove('active');
+  var links=document.querySelectorAll('#nav ul li a');
+  for(var i=0;i<links.length;i++) links[i].classList.remove('active');
+  var pg=document.getElementById('page-'+name);
+  if(pg) pg.classList.add('active');
+  var lk=document.getElementById('nav-'+name);
+  if(lk) lk.classList.add('active');
+  if(name==='pl') renderPL(calc());
+  if(name==='dash') renderDash(calc());
+  window.scrollTo(0,0);
+}
+
+function g(id){
+  var el=document.getElementById(id);
+  return el?parseFloat(el.value)||0:0;
+}
+function fmtW(n){return Math.round(n).toLocaleString()+'원';}
+function fmt(n){
+  var a=Math.abs(n);
+  if(a>=100000000) return (n/100000000).toFixed(1)+'억원';
+  if(a>=10000) return Math.round(n/10000)+'만원';
+  return Math.round(n).toLocaleString()+'원';
+}
+function setEl(id,val,color){
+  var el=document.getElementById(id);
+  if(!el) return;
+  el.textContent=val;
+  if(color) el.style.color=color;
+}
+
+function renderTenants(){
+  var el=document.getElementById('tenant-list');
+  if(!el) return;
+  var h='';
+  for(var i=0;i<tenants.length;i++){
+    var t=tenants[i];
+    h+='<div class="tr-row">';
+    h+='<div class="tn"><input type="text" value="'+t.name+'" onchange="updTName('+t.id+',this.value)"></div>';
+    h+='<div class="ta"><input type="number" value="'+t.rev+'" oninput="updTRev('+t.id+',this.value)"></div>';
+    h+='<span class="tv2" style="color:#7B3811">'+fmtW(t.rev)+'</span>';
+    h+='<button class="td2" onclick="remTenant('+t.id+')">X</button>';
+    h+='</div>';
+  }
+  el.innerHTML=h;
+  var btn=document.getElementById('btn-add-tenant');
+  if(btn) btn.style.opacity=tenants.length>=8?'0.4':'1';
+}
+function updTName(id,v){for(var i=0;i<tenants.length;i++) if(tenants[i].id===id){tenants[i].name=v;break;}}
+function updTRev(id,v){for(var i=0;i<tenants.length;i++) if(tenants[i].id===id){tenants[i].rev=parseFloat(v)||0;break;} rc();}
+function addTenant(){
+  if(tenants.length>=8){alert('최대 8개');return;}
+  tenants.push({id:nextTid++,name:'입점업체 '+(tenants.length+1),rev:0});
+  renderTenants();rc();
+}
+function remTenant(id){
+  if(tenants.length<=1){alert('최소 1개');return;}
+  tenants=tenants.filter(function(t){return t.id!==id;});
+  renderTenants();rc();
+}
+function getTTotal(){var s=0;for(var i=0;i<tenants.length;i++) s+=tenants[i].rev;return s;}
+
+function renderTenantCosts(){
+  var el=document.getElementById('tenantcost-list');
+  if(!el) return;
+  var h='';
+  for(var i=0;i<tenantCosts.length;i++){
+    var t=tenantCosts[i];
+    h+='<div class="tr-row">';
+    h+='<div class="tn"><input type="text" value="'+t.name+'" onchange="updTCName('+t.id+',this.value)"></div>';
+    h+='<div class="ta"><input type="number" value="'+t.amt+'" oninput="updTCAmt('+t.id+',this.value)"></div>';
+    h+='<span class="tv2" style="color:#B71C1C">'+fmtW(t.amt)+'</span>';
+    h+='<button class="td2" onclick="remTC('+t.id+')">X</button>';
+    h+='</div>';
+  }
+  el.innerHTML=h;
+}
+function updTCName(id,v){for(var i=0;i<tenantCosts.length;i++) if(tenantCosts[i].id===id){tenantCosts[i].name=v;break;}}
+function updTCAmt(id,v){for(var i=0;i<tenantCosts.length;i++) if(tenantCosts[i].id===id){tenantCosts[i].amt=parseFloat(v)||0;break;} rc();}
+function addTenantCost(){
+  if(tenantCosts.length>=8){alert('최대 8개');return;}
+  tenantCosts.push({id:nextTcid++,name:'입점업체 '+(tenantCosts.length+1)+' 수수료',amt:0});
+  renderTenantCosts();rc();
+}
+function remTC(id){
+  if(tenantCosts.length<=1){alert('최소 1개');return;}
+  tenantCosts=tenantCosts.filter(function(t){return t.id!==id;});
+  renderTenantCosts();rc();
+}
+function getTCTotal(){var s=0;for(var i=0;i<tenantCosts.length;i++) s+=tenantCosts[i].amt;return s;}
+
+function calc(){
+  var mbsSubNewRev=g('mbsSubNew')*g('mbsSubNewPrice');
+  var mbsSubRenewCnt=Math.round(g('mbsSubExpire')*(g('mbsSubRetain')/100));
+  var mbsSubRenewRev=mbsSubRenewCnt*g('mbsSubRenewPrice');
+  var mbsPeriodNewRev=g('mbsPeriodNew')*g('mbsPeriodNewPrice');
+  var mbsPeriodRenewCnt=Math.round(g('mbsPeriodTarget')*(g('mbsPeriodRenewRate')/100));
+  var mbsPeriodRenewRev=mbsPeriodRenewCnt*g('mbsPeriodRenewPrice');
+  var mbsDayRev=g('mbsDay')*g('mbsDayPrice');
+  var mbsCorp=g('mbsCorp'),mbsOption=g('mbsOption');
+  var mbsTotal=mbsSubNewRev+mbsSubRenewRev+mbsPeriodNewRev+mbsPeriodRenewRev+mbsDayRev+mbsCorp+mbsOption;
+  var ptReCnt=Math.round(g('ptReTarget')*(g('ptReRate')/100));
+  var ptReRev=ptReCnt*g('ptRePrice');
+  var ptTrialRev=g('ptTrialSell')*g('ptTrialPrice');
+  var ptConvCnt=Math.round(g('ptTrialSell')*(g('ptConvRate')/100));
+  var ptConvRev=ptConvCnt*g('ptConvPrice');
+  var ptOrgRev=g('ptOrganic')*g('ptOrganicPrice');
+  var ptRentalRev=g('ptRental');
+  var ptTotal=ptReRev+ptTrialRev+ptConvRev+ptOrgRev+ptRentalRev;
+  var tbTotal=g('tbBasic')+g('tbPremium')+g('tbPromo');
+  var pbTotal=mbsTotal+ptTotal+tbTotal;
+  var tenantTotal=getTTotal();
+  var commTotal=g('commRev')+g('etcRev');
+  var totalRev=pbTotal+tenantTotal+commTotal;
+  var ptCoach=g('ptCoachTotal'),tcTotal=getTCTotal();
+  var payFee=totalRev*0.0216;
+  var cos=ptCoach+tcTotal+payFee;
+  var imgwan=g('rent')+g('mgmtFee')+g('electric')+g('water');
+  var sgaNonOther=g('laundry')+g('supplies')+g('repair')+g('marketing')+g('etcCost');
+  var sgaNon=imgwan+sgaNonOther;
+  var bgLabor=g('bgLabor'),tbLabor=g('tbLabor'),sgaLab=bgLabor+tbLabor;
+  var totalCost=cos+sgaNon+sgaLab;
+  var gp=totalRev-cos;
+  var gpM=totalRev>0?gp/totalRev*100:0;
+  var opIncome=totalRev-totalCost;
+  var opM=totalRev>0?opIncome/totalRev*100:0;
+  var fixCost=imgwan+bgLabor+tbLabor;
+  var varRatio=totalRev>0?(cos+sgaNonOther)/totalRev:0;
+  var bepRev=varRatio<1?fixCost/(1-varRatio):999999999;
+  var bepPct=bepRev>0?Math.min(totalRev/bepRev*100,200):0;
+  return {mbsSubNewRev:mbsSubNewRev,mbsSubRenewCnt:mbsSubRenewCnt,mbsSubRenewRev:mbsSubRenewRev,
+    mbsPeriodNewRev:mbsPeriodNewRev,mbsPeriodRenewCnt:mbsPeriodRenewCnt,mbsPeriodRenewRev:mbsPeriodRenewRev,
+    mbsDayRev:mbsDayRev,mbsCorp:mbsCorp,mbsOption:mbsOption,mbsTotal:mbsTotal,
+    ptReCnt:ptReCnt,ptReRev:ptReRev,ptTrialRev:ptTrialRev,ptConvCnt:ptConvCnt,ptConvRev:ptConvRev,
+    ptOrgRev:ptOrgRev,ptRentalRev:ptRentalRev,ptTotal:ptTotal,
+    tbTotal:tbTotal,pbTotal:pbTotal,tenantTotal:tenantTotal,commTotal:commTotal,totalRev:totalRev,
+    ptCoach:ptCoach,tcTotal:tcTotal,payFee:payFee,cos:cos,
+    imgwan:imgwan,sgaNonOther:sgaNonOther,sgaNon:sgaNon,bgLabor:bgLabor,tbLabor:tbLabor,sgaLab:sgaLab,
+    totalCost:totalCost,gp:gp,gpM:gpM,opIncome:opIncome,opM:opM,bepRev:bepRev,bepPct:bepPct};
+}
+
+function rc(){
+  var d=calc();
+  setEl('h-subNew','신규: '+fmtW(d.mbsSubNewRev));
+  setEl('h-subRenew','연장 예상: '+d.mbsSubRenewCnt+'명 = '+fmtW(d.mbsSubRenewRev));
+  setEl('h-periodNew','신규: '+fmtW(d.mbsPeriodNewRev));
+  setEl('h-periodRenew','재등록 예상: '+d.mbsPeriodRenewCnt+'명 = '+fmtW(d.mbsPeriodRenewRev));
+  setEl('st-subTotal',fmtW(d.mbsSubNewRev+d.mbsSubRenewRev));
+  setEl('st-periodTotal',fmtW(d.mbsPeriodNewRev+d.mbsPeriodRenewRev));
+  setEl('tt-mbs',fmtW(d.mbsTotal));
+  setEl('h-ptRe','재등록 예상: '+d.ptReCnt+'명 = '+fmtW(d.ptReRev));
+  setEl('h-ptConv','전환 예상: '+d.ptConvCnt+'명 = '+fmtW(d.ptConvRev));
+  setEl('st-ptRe',fmtW(d.ptReRev));
+  setEl('st-ptTrial',fmtW(d.ptTrialRev));
+  setEl('st-ptConv',fmtW(d.ptConvRev));
+  setEl('tt-pt',fmtW(d.ptTotal));
+  setEl('tt-tb',fmtW(d.tbTotal));
+  setEl('tt-pb',fmtW(d.pbTotal));
+  setEl('pb-break','MBS '+fmt(d.mbsTotal)+' + PT '+fmt(d.ptTotal)+' + TB '+fmt(d.tbTotal));
+  setEl('tt-tenant',fmtW(d.tenantTotal));
+  setEl('st-tc',fmtW(d.tcTotal));
+  setEl('st-payFee',fmtW(Math.round(d.payFee)));
+  setEl('tt-cos',fmtW(Math.round(d.cos)));
+  setEl('st-imgwan',fmtW(d.imgwan));
+  setEl('tt-sganon',fmtW(d.sgaNon));
+  setEl('tt-labor',fmtW(d.sgaLab));
+  var plPg=document.getElementById('page-pl');
+  if(plPg&&plPg.classList.contains('active')) renderPL(d);
+  var dPg=document.getElementById('page-dash');
+  if(dPg&&dPg.classList.contains('active')) renderDash(d);
+}
+
+function row(lbl,val,color,indent){
+  var c=color||'';
+  var pl=indent?'padding-left:'+(indent*16)+'px':'';
+  return '<tr><td style="'+pl+'">'+lbl+'</td><td style="text-align:right;color:'+c+'">'+fmtW(val)+'</td></tr>';
+}
+function secRow(lbl,bg){
+  return '<tr><td colspan="2" style="background:'+bg+';color:#fff;font-weight:600;padding:8px">'+lbl+'</td></tr>';
+}
+function subRow(lbl,val,bg,color){
+  return '<tr><td style="background:'+bg+';padding:6px 8px;font-weight:600">'+lbl+'</td>'
+    +'<td style="background:'+bg+';text-align:right;font-weight:600;color:'+(color||'#000')+'">'+fmtW(val)+'</td></tr>';
+}
+
+function renderPL(d){
+  var t=document.getElementById('pl-table');
+  if(!t) return;
+  var tRows='';
+  for(var i=0;i<tenants.length;i++) tRows+=row('  '+tenants[i].name,tenants[i].rev,'',0);
+  var tcRows='';
+  for(var i=0;i<tenantCosts.length;i++) tcRows+=row('  '+tenantCosts[i].name,tenantCosts[i].amt,'',0);
+  var opC=d.opIncome>=0?'#1B5E20':'#B71C1C';
+  var h='';
+  h+=secRow('SALES TOTAL','#1565C0');
+  h+=subRow('MBS 매출',d.mbsTotal,'#E3F2FD','#1565C0');
+  h+=row('구독 신규 매출',d.mbsSubNewRev,'',1);
+  h+=row('구독 연장 매출',d.mbsSubRenewRev,'',1);
+  h+=row('기간권 신규 매출',d.mbsPeriodNewRev,'',1);
+  h+=row('기간권 재등록 매출',d.mbsPeriodRenewRev,'',1);
+  h+=row('1일권 매출',d.mbsDayRev,'',1);
+  h+=row('법인 매출',d.mbsCorp,'',1);
+  h+=row('옵션 매출',d.mbsOption,'',1);
+  h+=subRow('PT 매출',d.ptTotal,'#E0F2F1','#0F6E56');
+  h+=row('PT 재등록',d.ptReRev,'',1);
+  h+=row('PT 체험권 판매',d.ptTrialRev,'',1);
+  h+=row('PT 체험-정규 전환',d.ptConvRev,'',1);
+  h+=row('PT 신규 오가닉',d.ptOrgRev,'',1);
+  h+=row('PT 대관',d.ptRentalRev,'',1);
+  h+=subRow('TB 매출',d.tbTotal,'#EDE7F6','#4527A0');
+  h+='<tr style="background:#C8E6C9;border-top:2px solid #639922"><td style="font-weight:700;color:#2E7D32;padding:8px">PB 매출 합계 (MBS+PT+TB)</td><td style="text-align:right;font-weight:700;color:#2E7D32;font-size:13px">'+fmtW(d.pbTotal)+'</td></tr>';
+  h+=subRow('입점업체 매출',d.tenantTotal,'#FBE9E7','#7B3811');
+  h+=tRows;
+  h+=row('기타 매출',d.commTotal,'',0);
+  h+='<tr style="background:#1B3A5C"><td style="color:#fff;font-size:13px;padding:10px 8px;font-weight:700">매출합계</td><td style="color:#fff;text-align:right;font-size:14px;font-weight:700">'+fmtW(d.totalRev)+'</td></tr>';
+  h+='<tr><td colspan="2" style="height:8px"></td></tr>';
+  h+=secRow('COST TOTAL','#B71C1C');
+  h+=subRow('COS 매출원가',d.cos,'#FCE4EC','#B71C1C');
+  h+=row('PT 강사료',d.ptCoach,'',1);
+  h+=row('입점업체 수수료',d.tcTotal,'',1);
+  h+=tcRows;
+  h+=row('결제수수료 (x2.16%)',Math.round(d.payFee),'#854F0B',1);
+  h+=subRow('SGA 비인건성',d.sgaNon,'#F5F5F5','#424242');
+  h+=row('임관비',d.imgwan,'',1);
+  h+=row('세탁비',g('laundry'),'',1);
+  h+=row('소모품비',g('supplies'),'',1);
+  h+=row('수선비',g('repair'),'',1);
+  h+=row('마케팅비',g('marketing'),'',1);
+  h+=row('기타비용',g('etcCost'),'',1);
+  h+=subRow('SGA 인건비성',d.sgaLab,'#E8EAF6','#0D47A1');
+  h+=row('BG 인건비 (직영)',d.bgLabor,'',1);
+  h+=row('TB 인건비 (협력)',d.tbLabor,'',1);
+  h+='<tr style="background:#B71C1C"><td style="color:#fff;font-size:13px;padding:10px 8px;font-weight:700">비용합계</td><td style="color:#fff;text-align:right;font-size:14px;font-weight:700">'+fmtW(Math.round(d.totalCost))+'</td></tr>';
+  h+='<tr><td colspan="2" style="height:8px"></td></tr>';
+  h+='<tr style="background:#E0F7FA"><td style="color:#004D40;padding:10px 8px;font-weight:700;font-size:13px">Gross Profit (매출 - COS)</td><td style="color:#004D40;text-align:right;font-size:14px;font-weight:700">'+fmtW(Math.round(d.gp))+'</td></tr>';
+  h+='<tr style="background:#E0F7FA"><td style="color:#004D40;padding:2px 8px 8px 20px;font-size:11px">GP 마진율</td><td style="color:#004D40;text-align:right;font-size:11px">'+d.gpM.toFixed(1)+'%</td></tr>';
+  h+='<tr><td colspan="2" style="height:4px"></td></tr>';
+  h+='<tr style="background:#E8F5E9"><td style="color:'+opC+';padding:12px 8px;font-weight:700;font-size:14px">영업이익 (EBIT)</td><td style="color:'+opC+';text-align:right;font-size:16px;font-weight:700">'+fmtW(Math.round(d.opIncome))+'</td></tr>';
+  h+='<tr style="background:#E8F5E9"><td style="color:'+opC+';padding:2px 8px 10px 20px;font-size:11px">영업이익률</td><td style="color:'+opC+';text-align:right;font-size:11px">'+d.opM.toFixed(1)+'%</td></tr>';
+  h+='<tr><td colspan="2" style="height:8px"></td></tr>';
+  h+='<tr><td colspan="2" style="font-weight:600;padding:8px;font-size:11px;color:#5F5E5A">BEP 분석</td></tr>';
+  h+=row('BEP 매출',Math.round(d.bepRev),'#854F0B',0);
+  h+=row('현 매출 대비 잔여/초과',Math.round(d.totalRev-d.bepRev),d.totalRev>=d.bepRev?'#1B5E20':'#B71C1C',0);
+  h+='<tr><td>BEP 달성 여부</td><td style="text-align:right;font-weight:700;font-size:13px;color:'+opC+'">'+(d.opIncome>=0?'BEP 달성':'BEP 미달')+'</td></tr>';
+  t.innerHTML=h;
+}
+
+function renderDash(d){
+  if(!d) d=calc();
+  var lsh=d.totalRev>0?d.sgaLab/d.totalRev*100:0;
+  var rsh=d.totalRev>0?d.imgwan/d.totalRev*100:0;
+  var cosR=d.totalRev>0?d.cos/d.totalRev*100:0;
+  var ptSh=d.totalRev>0?d.ptTotal/d.totalRev*100:0;
+  var kpis=[
+    {l:'총 매출',v:fmt(d.totalRev),s:'전체 매출합계',c:'#1B3A5C'},
+    {l:'PB 매출 (핸들링)',v:fmt(d.pbTotal),s:d.totalRev>0?(d.pbTotal/d.totalRev*100).toFixed(0)+'% 전체 대비':'',c:'#2E7D32'},
+    {l:'Gross Profit',v:fmt(d.gp),s:'GP 마진율 '+d.gpM.toFixed(1)+'%',c:d.gpM>=50?'#1B5E20':'#B71C1C'},
+    {l:'영업이익',v:fmt(d.opIncome),s:'이익률 '+d.opM.toFixed(1)+'%',c:d.opIncome>=0?'#1B5E20':'#B71C1C'},
+    {l:'BEP 달성',v:d.opIncome>=0?'달성':'미달',s:d.bepPct.toFixed(0)+'% 달성',c:d.opIncome>=0?'#1B5E20':'#B71C1C'},
+    {l:'인건비 비중',v:lsh.toFixed(1)+'%',s:'매출 대비',c:lsh>45?'#B71C1C':lsh>38?'#854F0B':'#1B5E20'},
+    {l:'임관비 비중',v:rsh.toFixed(1)+'%',s:'매출 대비',c:rsh>25?'#B71C1C':'#1B5E20'},
+    {l:'COS 비중',v:cosR.toFixed(1)+'%',s:'매출 대비',c:cosR>30?'#B71C1C':'#1B5E20'}
+  ];
+  var grid=document.getElementById('kpi-grid');
+  if(grid){
+    var h='';
+    for(var i=0;i<kpis.length;i++){
+      var k=kpis[i];
+      h+='<div class="kpi-card"><div class="kl">'+k.l+'</div><div class="kv" style="color:'+k.c+'">'+k.v+'</div><div class="ks">'+k.s+'</div></div>';
+    }
+    grid.innerHTML=h;
+  }
+  var bar=document.getElementById('bep-bar');
+  if(bar){bar.style.width=Math.min(d.bepPct,100)+'%';bar.style.background=d.opIncome>=0?'#1B5E20':'#B71C1C';}
+  setEl('bep-mid','BEP '+fmt(Math.round(d.bepRev)));
+  setEl('bep-right','매출 '+fmt(d.totalRev));
+  var checks=[
+    {l:'BEP 달성',ok:d.opIncome>=0,note:d.opIncome>=0?'흑자 운영':fmtW(Math.round(d.bepRev-d.totalRev))+' 부족'},
+    {l:'GP 마진율 50% 이상',ok:d.gpM>=50,note:d.gpM.toFixed(1)+'%'},
+    {l:'COS 비중 30% 이하',ok:cosR<=30,note:cosR.toFixed(1)+'%'},
+    {l:'인건비 비중 45% 이하',ok:lsh<=45,note:lsh.toFixed(1)+'%'},
+    {l:'임관비 비중 25% 이하',ok:rsh<=25,note:rsh.toFixed(1)+'%'},
+    {l:'PT 매출 비중 25% 이상',ok:ptSh>=25,note:ptSh.toFixed(1)+'%'},
+    {l:'MBS 구독 잔존율 80% 이상',ok:g('mbsSubRetain')>=80,note:g('mbsSubRetain')+'%'},
+    {l:'PT 체험 전환율 35% 이상',ok:g('ptConvRate')>=35,note:g('ptConvRate')+'%'}
+  ];
+  var cl=document.getElementById('checklist');
+  if(cl){
+    var h='';
+    for(var i=0;i<checks.length;i++){
+      var c=checks[i];
+      var badge=c.ok?'<span class="bok">'+c.note+'</span>':'<span class="bng">'+c.note+'</span>';
+      h+='<div class="cr"><span>'+(c.ok?'V ':'X ')+c.l+'</span>'+badge+'</div>';
+    }
+    cl.innerHTML=h;
+  }
+}
+
+function getSnap(){
+  var s={};
+  var fields=['mbsSubNew','mbsSubNewPrice','mbsSubExpire','mbsSubRetain','mbsSubRenewPrice',
+    'mbsPeriodNew','mbsPeriodNewPrice','mbsPeriodTarget','mbsPeriodRenewRate','mbsPeriodRenewPrice',
+    'mbsDay','mbsDayPrice','mbsCorp','mbsOption',
+    'ptReTarget','ptReRate','ptRePrice','ptTrialSell','ptTrialPrice','ptConvRate','ptConvPrice',
+    'ptOrganic','ptOrganicPrice','ptRental','tbBasic','tbPremium','tbPromo','commRev','etcRev',
+    'ptCoachTotal','rent','mgmtFee','electric','water','laundry','supplies','repair','marketing',
+    'etcCost','bgLabor','tbLabor'];
+  for(var i=0;i<fields.length;i++) s[fields[i]]=g(fields[i]);
+  s._tenants=JSON.parse(JSON.stringify(tenants));
+  s._tCosts=JSON.parse(JSON.stringify(tenantCosts));
+  return s;
+}
+function loadArch(){try{return JSON.parse(localStorage.getItem('fitness_pl_v7')||'[]');}catch(e){return[];}}
+function saveArchLS(arr){try{localStorage.setItem('fitness_pl_v7',JSON.stringify(arr));}catch(e){alert('저장 실패');}}
+
+function saveArchive(){
+  var yr=document.getElementById('arch-year').value;
+  var mo=document.getElementById('arch-month').value;
+  var tp=document.getElementById('arch-type').value;
+  var d=calc();
+  var entry={id:Date.now(),year:parseInt(yr),month:parseInt(mo),type:tp,
+    label:yr+'년 '+mo+'월 ('+tp+')',
+    savedAt:new Date().toLocaleString('ko-KR'),
+    snapshot:getSnap(),
+    summary:{totalRev:Math.round(d.totalRev),pbTotal:Math.round(d.pbTotal),
+      mbsTotal:Math.round(d.mbsTotal),ptTotal:Math.round(d.ptTotal),
+      cos:Math.round(d.cos),totalCost:Math.round(d.totalCost),
+      gp:Math.round(d.gp),gpM:parseFloat(d.gpM.toFixed(1)),
+      opIncome:Math.round(d.opIncome),opM:parseFloat(d.opM.toFixed(1)),
+      bepOk:d.opIncome>=0}};
+  var arr=loadArch();
+  var ei=-1;
+  for(var i=0;i<arr.length;i++) if(arr[i].year===entry.year&&arr[i].month===entry.month&&arr[i].type===entry.type){ei=i;break;}
+  if(ei>=0){if(!confirm(entry.label+' 덮어쓸까요?'))return; arr[ei]=entry;}
+  else arr.push(entry);
+  arr.sort(function(a,b){return a.year*100+a.month-(b.year*100+b.month);});
+  saveArchLS(arr);
+  var msg=document.getElementById('arch-msg');
+  if(msg){msg.textContent='저장 완료: '+entry.label;msg.style.display='block';setTimeout(function(){msg.style.display='none';},3000);}
+  renderArchList();
+}
+function loadFromArch(id){
+  var arr=loadArch(),entry=null;
+  for(var i=0;i<arr.length;i++) if(arr[i].id===id){entry=arr[i];break;}
+  if(!entry) return;
+  var s=entry.snapshot;
+  var ks=Object.keys(s);
+  for(var i=0;i<ks.length;i++){
+    if(ks[i].charAt(0)==='_') continue;
+    var el=document.getElementById(ks[i]);
+    if(el) el.value=s[ks[i]];
+  }
+  if(s._tenants){tenants=JSON.parse(JSON.stringify(s._tenants));nextTid=Math.max.apply(null,tenants.map(function(t){return t.id;}))+1;renderTenants();}
+  if(s._tCosts){tenantCosts=JSON.parse(JSON.stringify(s._tCosts));nextTcid=Math.max.apply(null,tenantCosts.map(function(t){return t.id;}))+1;renderTenantCosts();}
+  rc();go('mbs');
+}
+function delArch(id,e){
+  e.stopPropagation();
+  if(!confirm('삭제하시겠습니까?')) return;
+  saveArchLS(loadArch().filter(function(a){return a.id!==id;}));
+  renderArchList();
+}
+function renderArchList(){
+  var arr=loadArch();
+  var el=document.getElementById('arch-list');
+  if(!el) return;
+  if(!arr.length){el.innerHTML='<div class="empty">저장된 데이터가 없습니다.</div>';return;}
+  var h='';
+  for(var i=0;i<arr.length;i++){
+    var a=arr[i];
+    var badge=a.summary.bepOk?'<span class="bok">BEP 달성</span>':'<span class="bng">BEP 미달</span>';
+    var opC=a.summary.opIncome>=0?'#1B5E20':'#B71C1C';
+    h+='<div class="ai" onclick="loadFromArch('+a.id+')">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:center">';
+    h+='<div class="ai-t">'+a.label+'</div>';
+    h+='<div style="display:flex;gap:8px;align-items:center">'+badge;
+    h+='<button class="btn btn-s btn-d" onclick="delArch('+a.id+',event)">삭제</button></div></div>';
+    h+='<div class="ai-m">';
+    h+='<span>총 매출 <strong>'+fmt(a.summary.totalRev)+'</strong></span>';
+    h+='<span style="color:#2E7D32">PB <strong>'+fmt(a.summary.pbTotal)+'</strong></span>';
+    h+='<span>GP <strong>'+a.summary.gpM+'%</strong></span>';
+    h+='<span style="color:'+opC+'">영업이익 <strong>'+fmt(a.summary.opIncome)+' ('+a.summary.opM+'%)</strong></span>';
+    h+='</div></div>';
+  }
+  el.innerHTML=h;
+}
+
+renderTenants();
+renderTenantCosts();
+go('mbs');
+rc();
+renderArchList();
+</script>
+</body>
+</html>
